@@ -81,12 +81,12 @@ prioridade sobre a do PATH. Modelos e perfis: `engine/models.json`; prompt da an
   - E2E: `e2e/caminho-feliz.spec.ts` (Playwright `_electron`, projeto sintético em `CORTAI_HOME`, sem modelos) no CI
     (`ci.yml` job e2e, windows-latest, 1 retentativa). `npm run build && npm run e2e`.
   - README com GIF (`docs/assets/demo.gif`, gravado por `DEMO=1 npx playwright test demo` + `python scripts/montar-gif.py`,
-    vídeo sintético do ffmpeg, nada de conteúdo do usuário), site em `site/` (GitHub Pages via `.github/workflows/site.yml`),
+    vídeo sintético do ffmpeg, nada de conteúdo do usuário), site em `site/` (estático, enviado à mão para https://taissircarvalho.com.br/lab/cortai),
     modelos de issue/PR em `.github/`, licença AGPL-3.0.
   - **Próximo passo (publicação, só com ok do usuário):** (1) criar o repositório `kzen4/cortai` **privado** (o usuário
     pediu para NÃO publicar ainda); (2) Settings → Actions → General → Workflow permissions: Read and write; (3) 1º commit
     (nada commitado até hoje; sem node_modules/dist/venv — já no .gitignore) e push; (4) no dia do lançamento: tornar
-    público, Settings → Pages → Source: GitHub Actions (Pages grátis só em repo público) e subir a tag `v0.1.0`.
+    público, subir site/ para taissircarvalho.com.br/lab/cortai e subir a tag `v0.1.0`.
     Tentativa de fazer pelo Chrome em 2026-11-20: a extensão Claude in Chrome estava ativa, mas as ferramentas não
     carregaram nesta sessão nem após `/chrome` → reiniciar com `claude --chrome` e conferir antes de prometer.
   - Fora: assinatura de código (SmartScreen avisa; só quando houver tração), macOS/Linux (instalador só Windows por ora).
@@ -100,4 +100,4 @@ Pendências conhecidas da Fase 1: macOS não testado (URLs prontas); Ollama no m
 ~~motor fora do asar~~ (resolvido na Fase 3); notas do LLM generosas
 (calibrar prompt com conjunto de avaliação, SPEC §14); layout "tela + rosto" para vídeos com webcam no canto.
 
-Decisões: licença **AGPL-3.0** (decidida pelo usuário em 2026-11-20; `LICENSE`, `package.json`). Repositório: github.com/kzen4/cortai (site: kzen4.github.io/cortai). Em aberto: nome/domínio próprio.
+Decisões: licença **AGPL-3.0** (decidida pelo usuário em 2026-11-20; `LICENSE`, `package.json`). Repositório: github.com/kzen4/cortai (site: https://taissircarvalho.com.br/lab/cortai — pasta site/ enviada à hospedagem pessoal; sem GitHub Pages). Em aberto: nome/domínio próprio.

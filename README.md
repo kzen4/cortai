@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/kzen4/cortai/releases/latest"><b>Baixar para Windows</b></a> ·
-  <a href="https://kzen4.github.io/cortai/">Site</a> ·
+  <a href="https://taissircarvalho.com.br/lab/cortai/">Site</a> ·
   <a href="https://github.com/kzen4/cortai/issues/new/choose">Relatar um problema</a>
 </p>
 
