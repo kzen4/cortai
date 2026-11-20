@@ -2,22 +2,42 @@
 // primeiro uso, abre um projeto, entra no editor, duplica um pedaço, desfaz e apaga. Não precisa de modelos
 // nem de internet: o projeto é sintético. Rodar:  npm run build && npm run e2e
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { seedProject } from './fixture';
 
 const HOME = mkdtempSync(join(tmpdir(), 'cortai-e2e-'));
 const errors: string[] = [];
+const logs: string[] = []; // console da janela + saída do processo principal (vão para test-results se falhar)
+let current: { app: ElectronApplication; page: Page } | null = null;
 
 async function open(): Promise<{ app: ElectronApplication; page: Page }> {
   const app = await electron.launch({ args: ['.'], env: { ...process.env, CORTAI_HOME: HOME } });
+  app.process().stdout?.on('data', (d) => logs.push(`[main] ${d}`));
+  app.process().stderr?.on('data', (d) => logs.push(`[main:err] ${d}`));
   const page = await app.firstWindow();
   page.on('pageerror', (e) => errors.push(e.message));
-  return { app, page };
+  page.on('console', (m) => logs.push(`[janela:${m.type()}] ${m.text()}`));
+  current = { app, page };
+  return current;
 }
+async function close(app: ElectronApplication) { await app.close(); current = null; }
 
-test.afterAll(() => rmSync(HOME, { recursive: true, force: true }));
+// falhou: guarda print, texto da tela e logs (o CI sobe test-results/ como artefato) e fecha o app
+test.afterEach(async ({}, info) => {
+  if (!current) return;
+  if (info.status !== info.expectedStatus) {
+    const { page } = current;
+    await page.screenshot({ path: info.outputPath('tela.png') }).catch(() => {});
+    const texto = await page.evaluate(() => document.body.innerText).catch((e) => `(sem texto: ${e})`);
+    const rel = [`URL: ${page.url()}`, '', 'TELA:', texto, '', 'ERROS:', ...errors, '', 'LOGS:', logs.join('')];
+    writeFileSync(info.outputPath('diagnostico.txt'), rel.join('\n'));
+  }
+  await current.app.close().catch(() => {});
+  current = null;
+});
+test.afterAll(() => { try { rmSync(HOME, { recursive: true, force: true }); } catch { /* app ainda soltando o banco: o temp do SO limpa */ } });
 
 test('caminho feliz: primeiro uso → projeto → editor → duplicar → desfazer → apagar', async () => {
   test.setTimeout(120_000);
@@ -26,7 +46,7 @@ test('caminho feliz: primeiro uso → projeto → editor → duplicar → desfaz
   let { app, page } = await open();
   await expect(page.getByText('Componentes')).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText('Motor de IA')).toBeVisible();
-  await app.close();
+  await close(app);
 
   // 2. Com um projeto pronto, abre direto no Início
   seedProject(HOME);
@@ -45,6 +65,21 @@ test('caminho feliz: primeiro uso → projeto → editor → duplicar → desfaz
   await expect(pieces).toHaveCount(3);
   await expect(pieces.nth(2)).toHaveAttribute('aria-label', /Cópia 1/);
 
+  // 4b. Enquadramento por pedaço: o pedaço selecionado vai para a esquerda (marca "E" na timeline)
+  await page.getByRole('tab', { name: 'Layout' }).click();
+  await pieces.nth(0).click();
+  await page.getByText('Esquerda', { exact: true }).click();
+  await expect(pieces.nth(0)).toContainText('E');
+  await expect(pieces.nth(1)).not.toContainText('E');
+  await page.keyboard.press('Control+z'); // desfaz o enquadramento
+
+  // 4c. Tela + webcam: legenda vai para o meio e aparece o ajuste da janela da webcam
+  await page.getByText('Tela + webcam', { exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Ajustar janela da webcam' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Legenda' }).click();
+  await expect(page.getByText('50%', { exact: true })).toBeVisible();
+  await page.keyboard.press('Control+z'); // volta ao modo anterior
+
   // 5. Desfazer volta para 2; apagar o 1º deixa 1
   await page.keyboard.press('Control+z');
   await expect(pieces).toHaveCount(2);
@@ -53,5 +88,5 @@ test('caminho feliz: primeiro uso → projeto → editor → duplicar → desfaz
   await expect(pieces).toHaveCount(1);
 
   expect(errors).toEqual([]);
-  await app.close();
+  await close(app);
 });

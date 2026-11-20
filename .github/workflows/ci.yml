@@ -32,6 +32,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
+      - run: node node_modules/electron/install.js   # Electron 45 baixa o binário só no 1º uso: antes do teste
       - run: npm run build
       - run: npm run e2e
       - if: failure()
