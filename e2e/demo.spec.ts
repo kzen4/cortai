@@ -20,7 +20,7 @@ test('demo', async () => {
   mkdirSync(OUT, { recursive: true });
   const D = 20;
   // 1º abre uma vez para criar o banco; depois semeia o projeto com vídeo e áudio de verdade
-  let app = await electron.launch({ args: ['.'], env: { ...process.env, CORTAI_HOME: HOME } });
+  let app = await electron.launch({ args: ['.', '--lang=pt-BR'], env: { ...process.env, CORTAI_HOME: HOME } });
   await (await app.firstWindow()).getByText('Componentes').waitFor({ timeout: 30_000 });
   await app.close();
   seedProject(HOME, {
@@ -35,7 +35,7 @@ test('demo', async () => {
     },
   });
 
-  app = await electron.launch({ args: ['.'], env: { ...process.env, CORTAI_HOME: HOME } });
+  app = await electron.launch({ args: ['.', '--lang=pt-BR'], env: { ...process.env, CORTAI_HOME: HOME } });
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1440, height: 900 });
   let n = 0;

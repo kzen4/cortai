@@ -13,7 +13,8 @@ const logs: string[] = []; // console da janela + saída do processo principal (
 let current: { app: ElectronApplication; page: Page } | null = null;
 
 async function open(): Promise<{ app: ElectronApplication; page: Page }> {
-  const app = await electron.launch({ args: ['.'], env: { ...process.env, CORTAI_HOME: HOME } });
+  // idioma fixo: o app segue o do sistema (o runner do GitHub é em inglês) e o teste confere textos em português
+  const app = await electron.launch({ args: ['.', `--lang=${process.env.E2E_LANG ?? 'pt-BR'}`], env: { ...process.env, CORTAI_HOME: HOME } });
   app.process().stdout?.on('data', (d) => logs.push(`[main] ${d}`));
   app.process().stderr?.on('data', (d) => logs.push(`[main:err] ${d}`));
   const page = await app.firstWindow();
