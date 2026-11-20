@@ -1,0 +1,52 @@
+{
+  "name": "cortai",
+  "productName": "Cortaí",
+  "version": "0.1.0",
+  "description": "Seus vídeos longos viram cortes virais. No seu computador, de graça, sem upload.",
+  "main": "./out/main/index.js",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "engine:setup": "uv sync --directory engine",
+    "engine:test": "uv run --directory engine pytest -q",
+    "dist": "electron-vite build && electron-builder --win",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@fontsource/anton": "^5.3.0",
+    "@fontsource/archivo-black": "^5.3.0",
+    "@fontsource/bebas-neue": "^5.3.0",
+    "@fontsource/inter": "5.3.0",
+    "@fontsource/jetbrains-mono": "5.3.0",
+    "@fontsource/montserrat": "5.3.0",
+    "@fontsource/poppins": "^5.3.0",
+    "@fontsource/sora": "5.3.0",
+    "@playwright/test": "^1.48.2",
+    "@tailwindcss/vite": "4.3.5",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "electron": "45.4.1",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "6.0.0",
+    "i18next": "27.2.2",
+    "lucide-react": "1.76.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-i18next": "18.0.3",
+    "tailwindcss": "4.3.5",
+    "typescript": "5.9.3",
+    "vite": "8.3.8",
+    "vitest": "5.1.1"
+  },
+  "author": "Cortaí",
+  "dependencies": {
+    "electron-updater": "6.3.9"
+  }
+}

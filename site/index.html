@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cortaí — cortes virais no seu computador</title>
+<meta name="description" content="Transforme vídeos longos em cortes verticais com legenda animada. Grátis, código aberto e 100% no seu computador: nada vai para a nuvem.">
+<link rel="icon" href="assets/icon.png">
+<meta property="og:title" content="Cortaí — cortes virais no seu computador">
+<meta property="og:description" content="Vídeos longos viram cortes com legenda, de graça e sem upload.">
+<meta property="og:image" content="assets/editor.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Tokens do app (src/renderer/styles/tokens.css) */
+:root{--bg:#0b0b0f;--surface:#15151c;--surface-2:#1e1e28;--border:#2a2a36;--text:#f4f4f6;--muted:#9a9aab;--primary:#c6f432;--on-primary:#0b0b0f;--ai:#8b5cf6;
+  --r-button:10px;--r-panel:16px;--ease:cubic-bezier(.2,.8,.2,1);--wrap:1120px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:80px;color-scheme:dark}
+body{background:var(--bg);color:var(--text);font:400 16px/1.6 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+img{display:block;max-width:100%;height:auto}
+.wrap{width:min(var(--wrap),100% - 32px);margin-inline:auto}
+h1,h2,h3{font-family:Sora,system-ui,sans-serif;line-height:1.15;letter-spacing:-.02em;text-wrap:balance}
+:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:6px}
+.skip{position:absolute;left:16px;top:-60px;background:var(--primary);color:var(--on-primary);padding:10px 14px;border-radius:var(--r-button);font-weight:600;z-index:10}
+.skip:focus{top:12px}
+svg.i{width:20px;height:20px;stroke:currentColor;stroke-width:1.75;fill:none;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+
+header.top{position:sticky;top:0;z-index:5;background:rgba(11,11,15,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+header.top .wrap{display:flex;align-items:center;gap:24px;height:64px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;font:800 18px Sora,sans-serif}
+.logo img{width:28px;height:28px}
+.logo b{color:var(--primary)}
+nav.links{display:flex;gap:22px;margin-left:auto;font-size:14px}
+nav.links a{text-decoration:none;color:var(--muted);transition:color .15s}
+nav.links a:hover{color:var(--text)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:12px 22px;border-radius:var(--r-button);font-weight:600;text-decoration:none;transition:filter .15s,background-color .15s}
+.btn.primary{background:var(--primary);color:var(--on-primary)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{border:1px solid var(--border);color:var(--text)}
+.btn.ghost:hover{background:var(--surface-2)}
+.btn.small{min-height:44px;padding:8px 16px;font-size:14px}
+
+.hero{padding:72px 0 48px;text-align:center}
+.tag{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:13px}
+.tag .dot{width:8px;height:8px;border-radius:50%;background:var(--primary)}
+.hero h1{font-size:clamp(2.2rem,6vw,4.2rem);margin:22px auto 18px;max-width:16ch}
+.hero h1 em{font-style:normal;color:var(--primary)}
+.hero p.lead{color:var(--muted);font-size:clamp(1.05rem,2vw,1.2rem);max-width:56ch;margin:0 auto 30px}
+.ctas{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.note{margin-top:14px;font-size:13px;color:var(--muted)}
+.shot{margin:48px auto 0;border-radius:var(--r-panel);border:1px solid var(--border);overflow:hidden;box-shadow:0 30px 80px -30px rgba(139,92,246,.45);max-width:1000px;aspect-ratio:1440/900;background:var(--surface)}
+.pillars{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 28px;margin-top:28px;color:var(--muted);font-size:14px}
+.pillars span{display:inline-flex;align-items:center;gap:8px}
+.pillars svg{color:var(--primary)}
+
+section.sec{padding:64px 0}
+.sec-head{max-width:640px;margin:0 auto 36px;text-align:center}
+.sec-head h2{font-size:clamp(1.6rem,3.6vw,2.4rem);margin-bottom:12px}
+.sec-head p{color:var(--muted)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;counter-reset:s}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-panel);padding:24px}
+.step::before{counter-increment:s;content:counter(s);display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);font:700 15px Sora,sans-serif;color:var(--primary);margin-bottom:14px}
+.card h3{font-size:1.1rem;margin-bottom:8px}
+.card p{color:var(--muted);font-size:15px}
+.feats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.feat .ic{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--surface-2);border:1px solid var(--border);color:var(--primary);margin-bottom:14px}
+.feat.ai .ic{color:var(--ai)}
+.demo{display:grid;grid-template-columns:1.25fr 1fr;gap:32px;align-items:center}
+.demo img{border-radius:var(--r-panel);border:1px solid var(--border)}
+.demo h2{font-size:clamp(1.5rem,3vw,2rem)}
+.demo ul{list-style:none;display:grid;gap:14px;margin-top:18px}
+.demo li{display:flex;gap:12px;color:var(--muted)}
+.demo li svg{color:var(--primary);margin-top:3px}
+.demo li b{color:var(--text);font-weight:600}
+.req{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.req h3{margin-bottom:14px}
+.req dl{display:grid;grid-template-columns:auto 1fr;gap:10px 18px;font-size:15px}
+.req dt{color:var(--muted)}
+.local{display:flex;gap:18px;align-items:flex-start;border-color:rgba(198,244,50,.35);background:linear-gradient(135deg,rgba(198,244,50,.07),rgba(139,92,246,.06))}
+.local > svg{width:28px;height:28px;color:var(--primary)}
+.local h3{margin-bottom:8px}
+.faq{max-width:760px;margin:0 auto;display:grid;gap:10px}
+.faq details{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-button);padding:0 20px}
+.faq summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:56px;font-weight:600}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary svg{transition:transform .2s var(--ease)}
+.faq details[open] summary svg{transform:rotate(180deg)}
+.faq details p{color:var(--muted);padding:0 0 18px;font-size:15px}
+.final{text-align:center;padding:72px 0}
+.final h2{font-size:clamp(1.8rem,4vw,2.6rem);margin-bottom:14px}
+.final p{color:var(--muted);margin-bottom:26px}
+footer{border-top:1px solid var(--border);padding:28px 0;color:var(--muted);font-size:14px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between;align-items:center}
+footer a{color:var(--muted)}
+footer a:hover{color:var(--text)}
+@media (max-width:860px){
+  nav.links{display:none}
+  header.top .btn{margin-left:auto}
+  .steps,.feats,.req,.demo{grid-template-columns:1fr}
+  .hero{padding-top:48px}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+<!-- Ícones Lucide (contorno). -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+  <symbol id="github" viewBox="0 0 24 24"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></symbol>
+  <symbol id="lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></symbol>
+  <symbol id="code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></symbol>
+  <symbol id="sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></symbol>
+  <symbol id="captions" viewBox="0 0 24 24"><rect width="18" height="14" x="3" y="5" rx="2"/><path d="M7 15h4M15 15h2M7 11h2M13 11h4"/></symbol>
+  <symbol id="scan-face" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></symbol>
+  <symbol id="scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/></symbol>
+  <symbol id="text-cursor" viewBox="0 0 24 24"><path d="M17 22h-1a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4h1"/><path d="M7 22h1a4 4 0 0 0 4-4v-1"/><path d="M7 2h1a4 4 0 0 1 4 4v1"/></symbol>
+  <symbol id="copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#"><img src="assets/icon.png" alt="" width="28" height="28"><span>Cortaí<b>.</b></span></a>
+    <nav class="links" aria-label="Seções">
+      <a href="#como">Como funciona</a><a href="#recursos">Recursos</a><a href="#requisitos">Requisitos</a><a href="#faq">Dúvidas</a>
+    </nav>
+    <a class="btn primary small" href="https://github.com/kzen4/cortai/releases/latest"><svg class="i" aria-hidden="true"><use href="#download"/></svg>Baixar</a>
+  </div>
+</header>
+
+<main id="conteudo">
+  <section class="hero">
+    <div class="wrap">
+      <span class="tag"><span class="dot" aria-hidden="true"></span>Grátis e de código aberto</span>
+      <h1>Seus vídeos longos viram <em>cortes virais</em></h1>
+      <p class="lead">O Cortaí acha os melhores momentos, enquadra no rosto e coloca legenda animada. Tudo no seu computador: nada vai para a nuvem e não tem mensalidade.</p>
+      <div class="ctas">
+        <a class="btn primary" href="https://github.com/kzen4/cortai/releases/latest"><svg class="i" aria-hidden="true"><use href="#download"/></svg>Baixar para Windows</a>
+        <a class="btn ghost" href="https://github.com/kzen4/cortai"><svg class="i" aria-hidden="true"><use href="#github"/></svg>Ver o código</a>
+      </div>
+      <p class="note">Windows 10 ou 11 (64 bits) · instalador com botões de avançar, sem terminal</p>
+      <div class="shot"><img src="assets/editor.webp" width="1440" height="900" alt="Editor do Cortaí: transcrição à esquerda, prévia vertical com legenda no meio, ajustes de legenda à direita e linha do tempo com pedaços embaixo" fetchpriority="high"></div>
+      <div class="pillars">
+        <span><svg class="i" aria-hidden="true"><use href="#lock"/></svg>Sem upload</span>
+        <span><svg class="i" aria-hidden="true"><use href="#gift"/></svg>Sem mensalidade</span>
+        <span><svg class="i" aria-hidden="true"><use href="#code"/></svg>Código aberto (AGPL-3.0)</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="como">
+    <div class="wrap">
+      <div class="sec-head"><h2>Como funciona</h2><p>Do vídeo bruto aos cortes prontos para postar, em três passos.</p></div>
+      <div class="steps">
+        <div class="card step"><h3>Importe o vídeo</h3><p>Arraste um arquivo ou cole o link de um vídeo seu: aula, podcast, live ou entrevista.</p></div>
+        <div class="card step"><h3>A IA encontra os momentos</h3><p>Ela transcreve a fala, escolhe os trechos com mais chance de prender a atenção e dá uma nota a cada um.</p></div>
+        <div class="card step"><h3>Ajuste e exporte</h3><p>Revise no editor, mude a legenda e o enquadramento e exporte em MP4 vertical, pronto para Reels, TikTok e Shorts.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="recursos">
+    <div class="wrap">
+      <div class="sec-head"><h2>Tudo o que um corte precisa</h2><p>Sem marca d’água e sem limite de vídeos.</p></div>
+      <div class="feats">
+        <div class="card feat ai"><div class="ic"><svg class="i" aria-hidden="true"><use href="#sparkles"/></svg></div><h3>Momentos virais por IA</h3><p>Uma IA que roda no seu PC lê a transcrição e sugere os melhores trechos, com gancho, valor e final.</p></div>
+        <div class="card feat"><div class="ic"><svg class="i" aria-hidden="true"><use href="#scan-face"/></svg></div><h3>Enquadramento no rosto</h3><p>O vídeo deitado vira vertical seguindo quem fala. Ajuste à mão quando quiser.</p></div>
+        <div class="card feat"><div class="ic"><svg class="i" aria-hidden="true"><use href="#captions"/></svg></div><h3>Legendas animadas</h3><p>8 estilos prontos, com a palavra falada em destaque. Corrija o texto com dois cliques direto na prévia.</p></div>
+        <div class="card feat"><div class="ic"><svg class="i" aria-hidden="true"><use href="#text-cursor"/></svg></div><h3>Edite pelo texto</h3><p>Apague uma frase na transcrição e ela some do vídeo.</p></div>
+        <div class="card feat"><div class="ic"><svg class="i" aria-hidden="true"><use href="#scissors"/></svg></div><h3>Linha do tempo completa</h3><p>Divida, apague, silencie e marque trechos. O resto se junta sozinho.</p></div>
+        <div class="card feat"><div class="ic"><svg class="i" aria-hidden="true"><use href="#copy"/></svg></div><h3>Cópias independentes</h3><p>Duplique um trecho e edite cada cópia como um vídeo à parte: legenda, enquadramento e cortes próprios.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="demo-t">
+    <div class="wrap demo">
+      <img src="assets/demo.gif" width="960" height="600" loading="lazy" alt="Demonstração: um trecho é duplicado na linha do tempo, a cópia toca em seguida e a legenda dela é editada na prévia sem mudar o original">
+      <div>
+        <h2 id="demo-t">Veja em ação</h2>
+        <ul>
+          <li><svg class="i" aria-hidden="true"><use href="#check"/></svg><span><b>Duplicar com Ctrl+D:</b> a cópia entra logo depois do original.</span></li>
+          <li><svg class="i" aria-hidden="true"><use href="#check"/></svg><span><b>Prévia igual ao export:</b> o que você vê é o que sai no MP4.</span></li>
+          <li><svg class="i" aria-hidden="true"><use href="#check"/></svg><span><b>Legenda editável na prévia:</b> duplo clique, digite, Enter.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="requisitos">
+    <div class="wrap">
+      <div class="sec-head"><h2>Requisitos</h2><p>O instalador tem cerca de 110 MB. Na primeira vez, o próprio Cortaí baixa o que falta e mostra cada item como pronto ou faltando.</p></div>
+      <div class="req">
+        <div class="card"><h3>Seu computador</h3>
+          <dl><dt>Sistema</dt><dd>Windows 10 ou 11, 64 bits</dd><dt>Memória</dt><dd>8 GB (16 GB recomendado)</dd><dt>Placa de vídeo</dt><dd>NVIDIA com 6 GB ou mais deixa tudo bem mais rápido. Sem ela, funciona pelo processador.</dd><dt>Espaço</dt><dd>De 6 a 16 GB, conforme o perfil escolhido</dd></dl>
+        </div>
+        <div class="card local"><svg class="i" aria-hidden="true"><use href="#lock"/></svg>
+          <div><h3>Seus vídeos não saem do seu PC</h3><p>Transcrição, IA e exportação rodam no seu computador. A internet só é usada para baixar os componentes na primeira vez e quando você importa um vídeo por link.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="faq">
+    <div class="wrap">
+      <div class="sec-head"><h2>Dúvidas frequentes</h2></div>
+      <div class="faq">
+        <details><summary>É grátis mesmo?<svg class="i" aria-hidden="true"><use href="#chevron"/></svg></summary><p>Sim. Não tem plano pago, mensalidade nem limite de vídeos. A IA roda no seu computador, então não existe custo por uso.</p></details>
+        <details><summary>O Windows mostrou “O Windows protegeu o computador”. E agora?<svg class="i" aria-hidden="true"><use href="#chevron"/></svg></summary><p>O aviso aparece porque o instalador ainda não tem certificado digital pago. Clique em “Mais informações” e depois em “Executar assim mesmo”. O código é aberto e pode ser conferido por qualquer pessoa.</p></details>
+        <details><summary>Preciso saber programar?<svg class="i" aria-hidden="true"><use href="#chevron"/></svg></summary><p>Não. Você instala com o assistente e o Cortaí cuida do resto: confere o que falta, baixa e configura sozinho. Nenhum terminal.</p></details>
+        <details><summary>Funciona sem placa de vídeo?<svg class="i" aria-hidden="true"><use href="#chevron"/></svg></summary><p>Funciona. O assistente detecta o seu computador e recomenda o perfil Leve, que usa modelos menores. Só demora mais para processar.</p></details>
+        <details><summary>Ele se atualiza sozinho?<svg class="i" aria-hidden="true"><use href="#chevron"/></svg></summary><p>Sim. Quando sai uma versão nova, ela é baixada em segundo plano e aparece um botão para reiniciar e atualizar. Se preferir, ela entra sozinha quando você fechar o app.</p></details>
+        <details><summary>Posso usar vídeo de outras pessoas?<svg class="i" aria-hidden="true"><use href="#chevron"/></svg></summary><p>Use conteúdo seu ou que você tem direito de usar. A importação por link foi pensada para os seus próprios vídeos.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <h2>Comece agora, é de graça</h2>
+      <p>Baixe, instale e gere os primeiros cortes ainda hoje.</p>
+      <a class="btn primary" href="https://github.com/kzen4/cortai/releases/latest"><svg class="i" aria-hidden="true"><use href="#download"/></svg>Baixar para Windows</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Cortaí · código aberto sob a licença AGPL-3.0</span>
+    <span><a href="https://github.com/kzen4/cortai">GitHub</a> · <a href="https://github.com/kzen4/cortai/issues/new/choose">Relatar um problema</a></span>
+  </div>
+</footer>
+</body>
+</html>

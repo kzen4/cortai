@@ -1,0 +1,18 @@
+{
+  "profiles": {
+    "light": { "whisper": "small", "llm": "qwen2.5:3b" },
+    "balanced": { "whisper": "large-v3-turbo", "llm": "qwen2.5:7b" },
+    "max": { "whisper": "large-v3", "llm": "qwen2.5:14b" }
+  },
+  "whisper": {
+    "small": { "repo": "Systran/faster-whisper-small", "sizeMB": 484 },
+    "medium": { "repo": "Systran/faster-whisper-medium", "sizeMB": 1530 },
+    "large-v3-turbo": { "repo": "mobiuslabsgmbh/faster-whisper-large-v3-turbo", "sizeMB": 1620 },
+    "large-v3": { "repo": "Systran/faster-whisper-large-v3", "sizeMB": 3090 }
+  },
+  "llm": {
+    "qwen2.5:3b": { "sizeMB": 1900 },
+    "qwen2.5:7b": { "sizeMB": 4700 },
+    "qwen2.5:14b": { "sizeMB": 9000 }
+  }
+}

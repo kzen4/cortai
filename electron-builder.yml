@@ -1,0 +1,39 @@
+# Instalador do Cortaí (Windows: .exe NSIS). Gerar:  npm run dist   →  dist/Cortai-Setup-<versão>.exe
+# O instalador leva só o app (~100 MB). Ferramentas, motor de IA e modelos são baixados pelo assistente
+# de primeiro uso (Componentes), que confere cada item e mostra o que está OK ou faltando.
+appId: br.lab.cortai
+productName: Cortaí
+directories:
+  output: dist
+  buildResources: resources
+files:
+  - out/**
+  - package.json
+extraResources:
+  # código do motor de IA (o venv dele vai para %APPDATA%\Cortaí\components\engine-venv)
+  - from: engine
+    to: engine
+    filter: ['**/*', '!.venv/**', '!**/__pycache__/**', '!tests/**', '!.pytest_cache/**']
+  - from: resources/fonts
+    to: fonts
+win:
+  target: nsis
+  icon: resources/icons/icon.ico
+  artifactName: Cortai-Setup-${version}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false                 # instala para o usuário: sem pedir senha de administrador
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Cortaí
+  runAfterFinish: true
+  installerLanguages: [pt_BR]
+  language: '1046'
+  deleteAppDataOnUninstall: false   # desinstalar não apaga projetos nem modelos baixados
+# Atualização automática: o app procura novas versões nos Releases deste repositório (ver .github/workflows/release.yml).
+# conta do GitHub do projeto (github.com/kzen4/cortai)
+publish:
+  provider: github
+  owner: kzen4
+  repo: cortai

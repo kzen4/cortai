@@ -1,0 +1,45 @@
+/* Design tokens do Cortaí (seção 3 do planejamento). Tema claro previsto em [data-theme="light"]. */
+:root {
+  --bg: #0b0b0f;
+  --surface: #15151c;
+  --surface-2: #1e1e28;
+  --border: #2a2a36;
+  --text: #f4f4f6;
+  --text-muted: #9a9aab;
+  --primary: #c6f432;
+  --on-primary: #0b0b0f;
+  --ai: #8b5cf6;
+  --warning: #ff7a2f;
+  --danger: #ff4d6d;
+  --success: #2dd4bf;
+  --score-gradient: linear-gradient(90deg, #8b5cf6, #c6f432);
+
+  /* trilhas da timeline */
+  --track-video: #3b82f6;
+  --track-caption: #c6f432;
+  --track-card: #8b5cf6;
+  --track-audio: #2dd4bf;
+  --track-effect: #ff7a2f;
+
+  --font-display: 'Sora', system-ui, sans-serif;
+  --font-ui: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --radius-input: 6px;
+  --radius-button: 10px;
+  --radius-panel: 16px;
+  --radius-modal: 24px;
+
+  --focus-ring: 0 0 0 4px rgba(198, 244, 50, 0.15);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-hover: 150ms;
+  --dur-panel: 220ms;
+
+  --titlebar-h: 40px;
+  --sidebar-w: 220px;
+  --sidebar-w-collapsed: 64px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-hover: 0ms; --dur-panel: 0ms; }
+}

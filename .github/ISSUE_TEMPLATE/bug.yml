@@ -1,0 +1,44 @@
+name: Relatar um problema
+description: Algo não funcionou como deveria no Cortaí
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Obrigado por ajudar! Quanto mais detalhes, mais rápido a gente resolve.
+  - type: textarea
+    id: oque
+    attributes:
+      label: O que aconteceu?
+      description: Descreva o problema e o que você esperava que acontecesse.
+    validations: { required: true }
+  - type: textarea
+    id: passos
+    attributes:
+      label: Como repetir o problema
+      placeholder: |
+        1. Importei um vídeo de 20 min
+        2. Abri o corte 3 no editor
+        3. Apertei Ctrl+D
+    validations: { required: true }
+  - type: input
+    id: versao
+    attributes:
+      label: Versão do Cortaí
+      placeholder: 0.1.0
+    validations: { required: true }
+  - type: dropdown
+    id: sistema
+    attributes:
+      label: Sistema
+      options: [Windows 11, Windows 10, macOS (Apple Silicon), Outro]
+    validations: { required: true }
+  - type: input
+    id: gpu
+    attributes:
+      label: Placa de vídeo e perfil escolhido
+      placeholder: RTX 3050 6 GB · Equilibrado
+  - type: textarea
+    id: extra
+    attributes:
+      label: Prints ou vídeo
+      description: Arraste aqui imagens ou uma gravação da tela, se tiver.

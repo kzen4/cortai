@@ -1,0 +1,25 @@
+name: Release
+# Publica uma versão: atualize "version" no package.json, crie a tag e envie:
+#   git tag v0.1.0 && git push origin v0.1.0
+# Gera o instalador do Windows e publica nos Releases do GitHub (o app instalado se atualiza a partir daqui).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

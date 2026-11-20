@@ -1,0 +1,12 @@
+node_modules/
+out/
+dist/
+engine/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+poc-output/
+desktop.ini
+test-results/
+playwright-report/
+docs/assets/demo-frames/

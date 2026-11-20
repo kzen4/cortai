@@ -1,0 +1,19 @@
+name: Sugerir uma ideia
+description: Uma função nova ou uma melhoria para o Cortaí
+labels: [ideia]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Que problema isso resolve?
+      placeholder: Quando eu edito cortes de podcast, preciso…
+    validations: { required: true }
+  - type: textarea
+    id: solucao
+    attributes:
+      label: Como você imagina a solução?
+    validations: { required: true }
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Já tentou outro jeito?
