@@ -895,7 +895,7 @@ export interface GenerationSettings {
   language: 'auto' | string; targetDuration: 'auto' | [number, number];
   maxClips: 'auto' | number; aspect: AspectRatio; captionTemplateId: string;
   range?: [number, number]; prompt?: string; requiredKeywords?: string[];
-  brandKitId?: string;
+  brandKitId?: string; // sem = o kit padrão (se não houver, nenhum); '' = nenhum
 }
 export interface Clip {
   id: string; projectId: string; title: string; description: string;
@@ -910,10 +910,14 @@ export interface Clip {
   muted?: [number, number][];         // legado: trechos silenciados (hoje é EditItem.muted)
   bookmarks?: number[];               // marcadores da timeline (segundos no original; só visual)
   wordEdits: Record<number, string>;  // índice da palavra -> texto corrigido
+  brandKitId?: string;                // brand kit aplicado (logo, CTA, fontes); resolvido na prévia e no export
+  cta?: { text: string; positionY: number }; // CTA do próprio corte (vazio = o do kit); vence o do kit
   layout: LayoutSettings; reframe: ReframeKeyframe[];
   caption: CaptionStyle; tracks: Track[]; audio: AudioSettings;
 }
-export interface EditItem { a: number; b: number; g: number; muted?: boolean; frame?: PieceFrame } // a, b = segundos do original; g = cópia
+export interface EditItem { a: number; b: number; g: number; muted?: boolean; frame?: PieceFrame; // a, b = segundos do original; g = cópia
+  keys?: ReframeKeyframe[]; // movimento próprio do pedaço (t em segundos do ORIGINAL); vence frame e os keyframes da cópia
+  zoom?: number }           // zoom próprio do pedaço; sem ele, o da cópia
 /** Enquadramento fixo de um pedaço (centro da janela, 0–1 no original); sem ele, segue os keyframes da cópia. */
 export interface PieceFrame { x: number; y: number }
 export interface CopyEdits { wordEdits: Record<number, string>; reframe: ReframeKeyframe[] }
@@ -923,6 +927,15 @@ export interface LayoutSettings { aspect: AspectRatio;
   mode: 'single' | 'split' | 'blur-bg' | 'color-bg' | 'screen-face';
   smoothing: number; bgColor?: string; bgBlur?: number;
   webcam?: { x: number; y: number; w: number } } // tela + webcam: centro (0–1) e largura (fração) da janela no original
+/** Template de legenda próprio (os prontos ficam em shared/templates.ts). */
+export interface CaptionTemplate { id: string; name: string; style: CaptionStyle }
+/** Brand kit (V1): arquivos guardados como data URL (logo/fontes pequenos; exporta/importa como um JSON só). */
+export interface BrandKit {
+  id: string; name: string; templateId?: string; palette: string[];
+  fonts: { family: string; data: string }[];
+  logo?: { data: string; position: 'tl' | 'tr' | 'bl' | 'br'; size: number; opacity: number }; // size = fração da largura
+  cta?: { text: string; seconds: number; color: string; bg: string; font: string; positionY: number }; // CTA final: últimos `seconds`
+}
 export interface CaptionStyle {
   templateId: string; font: string; size: number; color: string;
   highlightColor: string; strokeColor: string; strokeWidth: number;

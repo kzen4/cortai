@@ -16,6 +16,8 @@ extraResources:
     filter: ['**/*', '!.venv/**', '!**/__pycache__/**', '!tests/**', '!.pytest_cache/**']
   - from: resources/fonts
     to: fonts
+  - from: resources/icons     # ícone da janela (BrowserWindow.icon)
+    to: icons
 win:
   target: nsis
   icon: resources/icons/icon.ico

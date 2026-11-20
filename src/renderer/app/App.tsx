@@ -5,7 +5,9 @@ import { Sidebar } from './Sidebar';
 import { Titlebar } from './Titlebar';
 import { Home } from '../screens/Home';
 import { Lab } from '../screens/Lab';
-import { ComingSoon } from '../screens/ComingSoon';
+import { Templates } from '../screens/Templates';
+import { BrandKits } from '../screens/BrandKits';
+import { useLibrary } from './library';
 import { Setup } from '../screens/Setup';
 import { Processing } from '../screens/Processing';
 import { Results } from '../screens/Results';
@@ -22,6 +24,7 @@ export function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const comps = useComponents();
   const jobs = useJobs();
+  useLibrary(); // registra as fontes dos brand kits logo ao abrir
   const go = useCallback((r: Route) => setRoute(r), []);
 
   useEffect(() => {
@@ -61,7 +64,8 @@ export function App() {
           {route.name === 'exports' && <Exports />}
           {route.name === 'settings' && <Setup inSettings onDone={() => go({ name: 'home' })} />}
           {route.name === 'lab' && <Lab />}
-          {(route.name === 'templates' || route.name === 'brandkits') && <ComingSoon />}
+          {route.name === 'templates' && <Templates />}
+          {route.name === 'brandkits' && <BrandKits />}
           </ErrorBoundary>
         </main>
       </div>

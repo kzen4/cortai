@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clipPieces, copyPieces, detectCornerWebcam, FRAME_PRESETS, framingFor, presetOf, setPieceFrame, webcamRect, cropRect, cutWords, duplicatePieces, editList, forCopy, inCopy, inCopyAt, insertAt, keptSegments, locateOut, mergeRanges, normalizeClip, outDuration, outToRel, outputWords, relToOut, removeFromPieces, restoreGap, restoreWords, setIn, splitPiece, subtractRange } from './timeline';
+import { clipPieces, copyPieces, detectCornerWebcam, FRAME_PRESETS, framePieceFrom, setPieceZoom, framingFor, presetOf, setPieceFrame, webcamRect, cropRect, cutWords, duplicatePieces, editList, forCopy, inCopy, inCopyAt, insertAt, keptSegments, locateOut, mergeRanges, normalizeClip, outDuration, outToRel, outputWords, relToOut, removeFromPieces, restoreGap, restoreWords, setIn, splitPiece, subtractRange } from './timeline';
 
 const clip = { in: 100, out: 130, order: undefined, splits: undefined, reframe: [], copies: undefined, cuts: [[105, 108], [107, 110], [125, 140]] as [number, number][], wordEdits: { 2: 'certo' } };
 
@@ -123,6 +123,34 @@ describe('enquadramento por pedaço e tela + webcam', () => {
     expect(framingFor(f, p1).reframe[0].x).toBe(0.3);
     expect(presetOf(p0.frame)).toBe('left');
     expect(presetOf(p1.frame)).toBe('auto');
+  });
+  it('ajustar o enquadramento de um pedaço dividido não mexe nos vizinhos da mesma cópia', () => {
+    const s1 = splitPiece(c, clipPieces(c)[0], 10);
+    const s = splitPiece(s1, clipPieces(s1)[1], 20); // 3 pedaços, todos da cópia 0, seguindo o rosto
+    const auto = framingFor(s, clipPieces(s)[1]).reframe;
+    // arrasto: keyframes automáticos + um manual (o caso que antes vazava para a cópia inteira)
+    const dragged = [...auto, { t: 15, x: 0.9, y: 0.4, zoom: 1.4, ease: 'smooth' as const, auto: false }];
+    const f = framePieceFrom(s, 1, dragged);
+    const [p0, p1, p2] = clipPieces(f);
+    expect(framingFor(f, p1).reframe.find((k) => !k.auto)).toMatchObject({ t: 15, x: 0.9, y: 0.4 });
+    expect([p0.frame, p2.frame]).toEqual([undefined, undefined]);
+    expect(f.reframe).toEqual(s.reframe); // keyframes da cópia intactos
+    expect(framingFor(f, p0).reframe).toEqual(framingFor(s, clipPieces(s)[0]).reframe);
+    // "Seguir rosto" (só automáticos) devolve só esse pedaço
+    expect(clipPieces(framePieceFrom(f, 1, auto))[1].keys).toBeUndefined();
+  });
+  it('movimento e zoom próprios por pedaço; sobrevivem a mudar o início do corte e a dividir', () => {
+    const s = splitPiece(c, clipPieces(c)[0], 10);
+    const mov = [{ t: 0, x: 0.1, y: 0.5, zoom: 1, ease: 'smooth' as const, auto: false }, { t: 8, x: 0.9, y: 0.5, zoom: 1, ease: 'smooth' as const, auto: false }];
+    const f = setPieceZoom(framePieceFrom(s, 0, mov), [0], 2);
+    const [p0, p1] = clipPieces(f);
+    expect(framingFor(f, p0).reframe.map((k) => [k.t, k.x, k.zoom])).toEqual([[0, 0.1, 2], [8, 0.9, 2]]);
+    expect(framingFor(f, p1).reframe).toEqual(framingFor(s, clipPieces(s)[1]).reframe); // vizinho: rosto e zoom da cópia
+    const moved = setIn(f, f.in + 2); // início do corte anda: o movimento fica no mesmo instante do original
+    expect(framingFor(moved, clipPieces(moved)[0]).reframe[1].t).toBeCloseTo(6);
+    const halves = clipPieces(splitPiece(f, p0, 4));
+    expect(halves.slice(0, 2).map((p) => [p.zoom, p.keys?.length])).toEqual([[2, 2], [2, 2]]);
+    expect(presetOf(p0.frame, p0.keys)).toBe('custom');
   });
   it('dividir um pedaço enquadrado mantém o enquadramento nas duas metades', () => {
     const f = setPieceFrame(c, [0], FRAME_PRESETS.right);

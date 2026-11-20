@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, Check, Circle, Loader2, Minimize2, Play, Trash2, X } from 'lucide-react';
+import { AlertCircle, Check, Circle, Loader2, Minimize2, Play, X } from 'lucide-react';
+import { DeleteProject } from '../components/DeleteProject';
 import type { FoundClip, Job, JobKind } from '@shared/types';
 import { useJobs, useProjects, type Route } from '../app/data';
 import { Button, Progress, ScoreRing, fmtClock } from '../components/ui';
@@ -94,7 +95,7 @@ export function Processing({ id, go }: { id: string; go: (r: Route) => void }) {
       <footer className="flex justify-between gap-2">
         {stopped ? (
           <>
-            <Button variant="danger" icon={Trash2} onClick={async () => { await window.cortai.projects.remove(id); go({ name: 'home' }); }}>{t('project.delete')}</Button>
+            <DeleteProject id={id} name={project.name} clips={project.clipCount} onDone={() => go({ name: 'home' })} />
             <Button variant="primary" icon={Play} onClick={() => window.cortai.projects.resume(id)}>{t('proc.resume')}</Button>
           </>
         ) : (

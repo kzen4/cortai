@@ -10,6 +10,8 @@ import { ASPECT_SIZE } from '@shared/constants';
 import type { Route } from '../app/data';
 import { Button, Field, IconButton, ScoreRing, fmtClock, inputCls, scoreTier, textareaCls } from '../components/ui';
 import { drawOverlay, loadCaptionFont } from '../overlay/drawOverlay';
+import { useBrand, useClipBrand } from '../app/library';
+import { DeleteProject } from '../components/DeleteProject';
 
 export function Results({ id, go }: { id: string; go: (r: Route) => void }) {
   const { t } = useTranslation();
@@ -51,6 +53,7 @@ export function Results({ id, go }: { id: string; go: (r: Route) => void }) {
               {selecting ? t('results.selectDone') : t('results.select')}
             </Button>
             {!selecting && clips.length > 0 && <Button icon={Download} onClick={() => exportClips(clips.map((c) => c.id))}>{t('results.exportAll')}</Button>}
+            {!selecting && <DeleteProject id={id} name={data.project.name} clips={clips.length} onDone={() => go({ name: 'projects' })} />}
           </div>
         </header>
         {note && <p role="status" className="rounded-button border border-primary/30 bg-primary/10 px-4 py-2">{note} <button className="ml-2 cursor-pointer underline" onClick={() => go({ name: 'exports' })}>{t('nav.exports')}</button></p>}
@@ -92,10 +95,11 @@ function ClipCard({ clip, proxy, project, words, selecting, selected, active, on
   const canvas = useRef<HTMLCanvasElement>(null);
   const base = useRef<HTMLCanvasElement>(null);
   const [W, H] = ASPECT_SIZE[clip.layout.aspect];
-  const input = useMemo(() => ({ chunks: chunkWords(outputWords(words, clip), clip.caption.wordsPerLine), caption: clip.caption }), [words, clip]);
   const pieces = useMemo(() => clipPieces(clip), [clip]);
   const segs = useMemo(() => pieces.map((p): Seg => [p.a, p.b]), [pieces]);
   const dur = outDuration(segs);
+  const brand = useBrand(useClipBrand(clip));
+  const input = useMemo(() => ({ chunks: chunkWords(outputWords(words, clip), clip.caption.wordsPerLine), caption: clip.caption, brand, duration: dur }), [words, clip, brand, dur]);
   const startAt = clip.in + (segs[0]?.[0] ?? 0);
   const idx = useRef(0); // pedaço atual (o mesmo instante do original pode tocar 2×)
   const inSeg = (i: number, rel: number) => !!segs[i] && rel >= segs[i][0] - 0.02 && rel <= segs[i][1] + 0.02;

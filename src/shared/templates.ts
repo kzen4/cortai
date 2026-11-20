@@ -2,8 +2,9 @@ import type { CaptionStyle } from './types';
 
 const base = { strokeColor: '#000000', emojis: false, keywords: [] as string[] };
 
-/** 8 templates de legenda (SPEC §4.8). Fontes OFL empacotadas no app. */
+/** 9 templates de legenda (o Cortaí é o padrão do sistema) (SPEC §4.8). Fontes OFL empacotadas no app. */
 export const CAPTION_TEMPLATES: Record<string, CaptionStyle> = {
+  cortai: { ...base, templateId: 'cortai', font: 'Montserrat ExtraBold', size: 78, color: '#F4F4F6', highlightColor: '#C6F432', strokeColor: '#0B0B0F', strokeWidth: 6, positionY: 70, wordsPerLine: 3, uppercase: true, animation: 'pop', shadow: { color: 'rgba(139,92,246,0.55)', blur: 18, x: 0, y: 0 } },
   hormozi: { ...base, templateId: 'hormozi', font: 'Montserrat ExtraBold', size: 78, color: '#FFFFFF', highlightColor: '#C6F432', strokeWidth: 6, positionY: 70, wordsPerLine: 3, uppercase: true, animation: 'pop' },
   karaoke: { ...base, templateId: 'karaoke', font: 'Poppins', size: 70, color: '#FFFFFF', highlightColor: '#FFD60A', strokeWidth: 5, positionY: 72, wordsPerLine: 4, uppercase: false, animation: 'none' },
   minimal: { ...base, templateId: 'minimal', font: 'Inter', size: 58, color: '#FFFFFF', highlightColor: '#FFFFFF', strokeWidth: 0, positionY: 78, wordsPerLine: 5, uppercase: false, animation: 'fade', shadow: { color: 'rgba(0,0,0,0.8)', blur: 12, x: 0, y: 3 } },
@@ -13,9 +14,9 @@ export const CAPTION_TEMPLATES: Record<string, CaptionStyle> = {
   maquina: { ...base, templateId: 'maquina', font: 'Anton', size: 84, color: '#FFFFFF', highlightColor: '#FFFFFF', strokeWidth: 5, positionY: 70, wordsPerLine: 4, uppercase: true, animation: 'typewriter' },
   impacto: { ...base, templateId: 'impacto', font: 'Anton', size: 118, color: '#FFD60A', highlightColor: '#FFFFFF', strokeWidth: 8, positionY: 66, wordsPerLine: 2, uppercase: true, animation: 'pop' },
 };
-export const DEFAULT_TEMPLATE = 'hormozi';
+export const DEFAULT_TEMPLATE = 'cortai'; // padrão do sistema (par do brand kit Cortaí)
 export const TEMPLATE_NAMES: Record<string, string> = {
-  hormozi: 'Hormozi', karaoke: 'Karaokê', minimal: 'Minimal', neon: 'Neon', caixa: 'Caixa', destaque: 'Destaque', maquina: 'Máquina', impacto: 'Impacto',
+  cortai: 'Cortaí', hormozi: 'Hormozi', karaoke: 'Karaokê', minimal: 'Minimal', neon: 'Neon', caixa: 'Caixa', destaque: 'Destaque', maquina: 'Máquina', impacto: 'Impacto',
 };
 
 /** Peso usado no canvas para cada família (só as que têm o peso carregado, para não sintetizar negrito). */

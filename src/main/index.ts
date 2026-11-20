@@ -1,7 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { execFile } from 'node:child_process';
 import { userInfo } from 'node:os';
-import { basename, join } from 'node:path';
+import { readFileSync, statSync, writeFileSync } from 'node:fs';
+import { basename, extname, join } from 'node:path';
 import type { Clip, EngineStatus, GenerationSettings, Settings, SourceInfo, SystemInfo } from '@shared/types';
 import { Components, stopOllama, toolPath } from './components';
 import { getSettings, setSettings } from './db';
@@ -14,6 +15,9 @@ import * as projects from './projects';
 import { initUpdater } from './updater';
 
 const PRELOAD = join(__dirname, '../preload/index.js');
+// ícone da janela/barra de tarefas: sem ele, em dev (electron.exe) aparece o do Electron. Instalado vem de resources/icons.
+const ICON = join(app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'resources'), 'icons', process.platform === 'win32' ? 'icon.ico' : 'icon.png');
+if (process.platform === 'win32') app.setAppUserModelId('br.lab.cortai'); // mesmo appId do instalador: agrupa janela, atalho e notificações
 registerMediaScheme();
 
 let mainWin: BrowserWindow | null = null;
@@ -34,7 +38,7 @@ function createWindow() {
   const mac = process.platform === 'darwin';
   mainWin = new BrowserWindow({
     width: 1440, height: 900, minWidth: 1280, minHeight: 760,
-    backgroundColor: '#0B0B0F', show: false,
+    backgroundColor: '#0B0B0F', show: false, icon: ICON,
     titleBarStyle: 'hidden',
     // botões nativos da janela: à direita no Windows/Linux, semáforo à esquerda no macOS
     ...(mac ? { trafficLightPosition: { x: 14, y: 13 } } : { titleBarOverlay: { color: '#0B0B0F', symbolColor: '#9A9AAB', height: 40 } }),
@@ -113,6 +117,28 @@ h('clips:export', (projectId: string, clipIds: string[]) => queue.enqueueRender(
 h('jobs:list', () => queue.list());
 h('jobs:cancel', (id: number) => queue.cancelJob(id));
 h('jobs:clear', () => queue.clearFinished());
+
+// templates e brand kits: arquivos viram data URL (o renderer não lê o disco)
+const MIME: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ttf': 'font/ttf', '.otf': 'font/otf', '.woff2': 'font/woff2', '.woff': 'font/woff' };
+h('brand:pickFile', async (kind: 'image' | 'font') => {
+  const ext = kind === 'image' ? ['png', 'jpg', 'jpeg', 'webp', 'svg'] : ['ttf', 'otf', 'woff2', 'woff'];
+  const r = await dialog.showOpenDialog(mainWin!, { properties: ['openFile'], filters: [{ name: kind === 'image' ? 'Imagens' : 'Fontes', extensions: ext }] });
+  if (r.canceled) return null;
+  const p = r.filePaths[0];
+  if (statSync(p).size > (kind === 'image' ? 2 : 5) * 1024 * 1024) return { error: 'tooBig' as const };
+  return { name: basename(p).replace(/\.[^.]+$/, ''), data: `data:${MIME[extname(p).toLowerCase()]};base64,${readFileSync(p).toString('base64')}` };
+});
+h('brand:saveFile', async (name: string, text: string) => {
+  const r = await dialog.showSaveDialog(mainWin!, { defaultPath: `${name.replace(/[<>:"/\\|?*]/g, '')}.cortai-template`, filters: [{ name: 'Template do Cortaí', extensions: ['cortai-template'] }] });
+  if (r.canceled || !r.filePath) return false;
+  writeFileSync(r.filePath, text);
+  return true;
+});
+h('brand:openFile', async () => {
+  const r = await dialog.showOpenDialog(mainWin!, { properties: ['openFile'], filters: [{ name: 'Template do Cortaí', extensions: ['cortai-template', 'json'] }] });
+  if (r.canceled || statSync(r.filePaths[0]).size > 30 * 1024 * 1024) return null;
+  return readFileSync(r.filePaths[0], 'utf8');
+});
 
 // sistema de arquivos (só o que o renderer precisa)
 h('shell:showItem', (p: string) => shell.showItemInFolder(p));

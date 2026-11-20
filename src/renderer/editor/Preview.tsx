@@ -4,12 +4,13 @@ import { Crosshair, Focus, Grid2x2, LocateFixed, Pause, Pencil, Pin, Play, ScanF
 import { chunkWords } from '@shared/captions';
 import { ASPECT_SIZE } from '@shared/constants';
 import { reframeAt } from '@shared/reframe';
-import { cropRect, DEFAULT_WEBCAM, detectCornerWebcam, forCopy, framingFor, inCopy, outputWords, setPieceFrame, webcamRect, type Piece } from '@shared/timeline';
+import { cropRect, DEFAULT_WEBCAM, detectCornerWebcam, forCopy, framePieceFrom, framingFor, inCopy, outputWords, webcamRect, type Piece } from '@shared/timeline';
 import type { Clip, ReframeKeyframe, Word } from '@shared/types';
 import { Button, IconButton, fmtClock } from '../components/ui';
 import { drawBase } from '../overlay/composite';
 import { drawOverlay, loadCaptionFont } from '../overlay/drawOverlay';
 import type { Player } from './Editor';
+import { useBrand, useClipBrand } from '../app/library';
 
 type Update = (fn: (c: Clip) => Clip, merge?: string) => void;
 const CONTROLS = 64; // altura da barra de controles abaixo da prévia
@@ -43,7 +44,8 @@ export function Preview({ clip, words, src, player, copy, pieces, playing, safe,
   // maior tamanho que cabe mantendo a proporção do formato
   const ph = Math.max(120, Math.floor(Math.min(avail.h - CONTROLS - 24, ((avail.w - 32) * H) / W)));
   const pw = Math.round((ph * W) / H);
-  const input = useMemo(() => ({ chunks: chunkWords(outputWords(words, clip), clip.caption.wordsPerLine), caption: clip.caption }), [words, clip]);
+  const brand = useBrand(useClipBrand(clip));
+  const input = useMemo(() => ({ chunks: chunkWords(outputWords(words, clip), clip.caption.wordsPerLine), caption: clip.caption, brand, duration }), [words, clip, brand, duration]);
   const [fontReady, setFontReady] = useState(0);
   useEffect(() => { void loadCaptionFont(clip.caption).then(() => setFontReady((n) => n + 1)); }, [clip.caption]);
 
@@ -112,14 +114,10 @@ export function Preview({ clip, words, src, player, copy, pieces, playing, safe,
       {framing ? (
         clip.layout.mode === 'screen-face'
           ? <WebcamView clip={clip} src={src} player={player} update={update} onDone={() => setFraming(false)} maxW={avail.w - 32} maxH={avail.h - CONTROLS - 24} />
-          : framingPiece?.frame
+          : framingPiece
             ? <FramingView clip={framingFor(clip, framingPiece)} src={src} player={player} projectId={projectId} onDone={() => setFraming(false)} maxW={avail.w - 32} maxH={avail.h - CONTROLS - 24}
-                update={(fn, m) => update((c) => { // pedaço com enquadramento fixo: o arrasto muda só o dele; "seguir rosto" o devolve à cópia
-                  const r = fn(framingFor(c, framingPiece)).reframe;
-                  if (r.some((k) => k.auto)) return setPieceFrame(c, [framingPiece.entry], undefined);
-                  const { x, y } = reframeAt(r, player.relNow());
-                  return setPieceFrame(c, [framingPiece.entry], { x, y });
-                }, m)} />
+                // cada pedaço é independente: o ajuste fixa só o dele; "seguir rosto" o devolve à cópia
+                update={(fn, m) => update((c) => framePieceFrom(c, framingPiece.entry, fn(framingFor(c, framingPiece)).reframe), m)} />
             : <FramingView clip={forCopy(clip, copy)} src={src} player={player} update={(fn, m) => update((c) => inCopy(c, copy, fn), m)} projectId={projectId} onDone={() => setFraming(false)} maxW={avail.w - 32} maxH={avail.h - CONTROLS - 24} />
       ) : (
         <div className="relative shrink-0 overflow-hidden rounded-panel border border-border bg-black" style={{ width: pw, height: ph }}>

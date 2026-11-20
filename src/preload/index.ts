@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import type {
-  CaptionStyle, Clip, ComponentState, EngineStatus, FoundClip, GenerationSettings, Job, PocResult, Profile, Project,
+  BrandKit, CaptionStyle, Clip, ComponentState, EngineStatus, FoundClip, GenerationSettings, Job, PocResult, Profile, Project,
   ProjectSummary, ReframeKeyframe, Settings, SetupInfo, SourceInfo, SystemInfo, Transcript, UpdateState, Word,
 } from '@shared/types';
 
@@ -61,6 +61,11 @@ const api = {
     clear: () => inv<void>('jobs:clear'),
     onChange: on<Job[]>('jobs:changed'),
   },
+  brand: {
+    pickFile: (kind: 'image' | 'font') => inv<{ name: string; data: string } | { error: 'tooBig' } | null>('brand:pickFile', kind),
+    saveFile: (name: string, text: string) => inv<boolean>('brand:saveFile', name, text),
+    openFile: () => inv<string | null>('brand:openFile'),
+  },
   shell: {
     showItem: (p: string) => inv<void>('shell:showItem', p),
     openPath: (p: string) => inv<string>('shell:openPath', p),
@@ -68,7 +73,7 @@ const api = {
   },
   /** Janela oculta do export (#export). null em frame = repetir o quadro anterior. */
   render: {
-    job: () => inv<{ width: number; height: number; fps: number; duration: number; words: Word[]; caption: CaptionStyle } | undefined>('render:job'),
+    job: () => inv<{ width: number; height: number; fps: number; duration: number; words: Word[]; caption: CaptionStyle; brand?: BrandKit } | undefined>('render:job'),
     frame: (buf: Uint8ClampedArray | null) => inv<void>('render:frame', buf),
     end: () => inv<void>('render:end'),
   },

@@ -4,13 +4,13 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, w
 import { join } from 'node:path';
 import { toSrt } from '@shared/clipWords';
 import { DEFAULT_WEBCAM, detectCornerWebcam, editList, outDuration, outputWords } from '@shared/timeline';
-import { CAPTION_TEMPLATES, DEFAULT_TEMPLATE } from '@shared/templates';
+import { clipBrand, findKit, findTemplate } from '@shared/library';
 import type { Clip, Job, ReframeKeyframe } from '@shared/types';
 import { getSettings } from '../db';
 import { ensureOllamaRunning, ffmpegPath, toolPath } from '../components';
 import { Cancelled, type Sidecar } from '../engine/sidecar';
 import { encodeArgs, probe, renderClip, run } from '../ffmpeg/render';
-import { clipPath, loadClip, loadProject, loadTranscript, projectDir, proxyPath, saveClip, saveProject } from '../projects';
+import { clipPath, recordExport, loadClip, loadProject, loadTranscript, projectDir, proxyPath, saveClip, saveProject } from '../projects';
 
 export interface Ctx {
   signal: AbortSignal;
@@ -106,7 +106,7 @@ export async function reframe(job: Job, ctx: Ctx) {
 export async function finalize(job: Job) {
   const p = loadProject(job.projectId);
   const kfs = JSON.parse(readFileSync(join(projectDir(p.id), 'analysis', 'reframe.json'), 'utf8')) as Record<string, ReframeKeyframe[]>;
-  const tpl = CAPTION_TEMPLATES[p.generation.captionTemplateId] ?? CAPTION_TEMPLATES[DEFAULT_TEMPLATE];
+  const tpl = findTemplate(p.generation.captionTemplateId, getSettings().captionTemplates);
   const list = candidates(p.id);
   for (const c of list) {
     if (existsSync(clipPath(p.id, c.id))) continue; // edições do usuário nunca são sobrescritas
@@ -116,7 +116,7 @@ export async function finalize(job: Job) {
       id: c.id, projectId: p.id, title: c.title, description: c.description, hashtags: c.hashtags, score: c.score,
       scores: c.scores, reason: c.reason, favorite: false, in: c.in, out: c.out, cuts: [], wordEdits: {},
       layout: { aspect: p.generation.aspect, mode: cam ? 'screen-face' : 'single', smoothing: 0.5, ...(cam ? { webcam: { ...DEFAULT_WEBCAM, ...cam } } : {}) },
-      reframe: kfs[c.id] ?? [],
+      reframe: kfs[c.id] ?? [], ...(p.generation.brandKitId ? { brandKitId: p.generation.brandKitId } : {}),
       caption: { ...tpl, keywords: c.keywords, ...(cam ? { positionY: 50 } : {}) }, tracks: [], audio: { speechGain: 1, normalizeLufs: -14, denoise: false },
     });
   }
@@ -142,7 +142,7 @@ export async function render(job: Job, ctx: Ctx) {
   const duration = outDuration(editList(clip));
   ctx.setPayload({ clipId, outPath: out });
   try {
-    await renderClip({ source: p.source.path, src: p.source, clip, words, caption: clip.caption, out: part }, ctx.preload, ctx.openWorker, (x) => {
+    await renderClip({ source: p.source.path, src: p.source, clip, words, caption: clip.caption, out: part, brand: clipBrand(findKit(clip.brandKitId, getSettings().brandKits), clip.cta) }, ctx.preload, ctx.openWorker, (x) => {
       const secs = (Date.now() - t0) / 1000;
       ctx.progress(x, secs > 1 ? `${((x * duration) / secs).toFixed(1).replace('.', ',')}× tempo real` : undefined);
     }, ctx.signal);
@@ -152,6 +152,7 @@ export async function render(job: Job, ctx: Ctx) {
   }
   rmSync(out, { force: true });
   renameSync(part, out);
+  recordExport(p.id, out);
   writeFileSync(`${base}.srt`, toSrt(words));
   writeFileSync(`${base}.txt`, `${clip.title}\n\n${clip.description}\n\n${clip.hashtags.map((h) => `#${h}`).join(' ')}\n`);
 }

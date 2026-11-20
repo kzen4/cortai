@@ -111,3 +111,9 @@ src/shared/      types.ts · timeline.ts · captions.ts · clipWords.ts · refra
 engine/          cortai_engine/ (server, transcribe, segment, analyze, ollama, reframe, util) · prompts/analyze.md · models.json · models/ (YuNet) · tests/
 resources/fonts/ Montserrat-ExtraBold.ttf (OFL) — mesma fonte no preview e no export
 ```
+
+## Templates e brand kits (2026-11-20)
+- Ficam nas configurações (SQLite), não em pastas: logo e fontes como data URL. Motivo: imagem de `cortai-media://` deixaria o canvas
+  do export "tainted" (getImageData falha) e o `.cortai-template` vira um JSON só (SPEC pedia zip; zipar só se houver asset grande, ex.: intro/outro).
+- Logo/CTA são desenhados pelo mesmo `drawOverlay` (prévia = export). Template é copiado no corte; brand kit é referenciado (`brandKitId`).
+

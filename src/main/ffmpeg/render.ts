@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain } from 'electron';
 import { execFileSync, spawn } from 'node:child_process';
 import type { Writable } from 'node:stream';
-import type { CaptionStyle, Word } from '@shared/types';
+import type { BrandKit, CaptionStyle, Word } from '@shared/types';
 import { ASPECT_SIZE } from '@shared/constants';
 import { ffmpegPath, ffprobePath } from '../components';
 import { Cancelled } from '../engine/sidecar';
@@ -73,7 +73,7 @@ export function run(args: string[], o: { duration?: number; onProgress?: (p: num
 }
 
 // ---------- overlay: janela oculta roda o MESMO drawOverlay do preview, quadro a quadro ----------
-export interface OverlayJob { width: number; height: number; fps: number; duration: number; words: Word[]; caption: CaptionStyle }
+export interface OverlayJob { width: number; height: number; fps: number; duration: number; words: Word[]; caption: CaptionStyle; brand?: BrandKit }
 let current: { job: OverlayJob; sink: ReturnType<typeof run>; last: Buffer | null; frames: number; onFrame: (n: number) => void; finish: () => void } | null = null;
 ipcMain.handle('render:job', () => current?.job);
 ipcMain.handle('render:frame', (_e, buf: Uint8Array | null) => {
@@ -103,7 +103,7 @@ function measureLoudness(spec: RenderSpec): Promise<Loudness | undefined> {
 export interface RenderSpec {
   source: string; src: { width: number; height: number }; clip: ClipLike;
   /** palavras já no tempo do vídeo final (outputWords) */
-  words: Word[]; caption: CaptionStyle; out: string; fps?: number;
+  words: Word[]; caption: CaptionStyle; out: string; fps?: number; brand?: BrandKit;
 }
 
 /** Exporta um corte. `openWorker` carrega o renderer em modo #export numa janela oculta. */
@@ -123,7 +123,7 @@ export async function renderClip(spec: RenderSpec, preload: string, openWorker: 
   signal?.addEventListener('abort', onAbort);
   try {
     await new Promise<void>((finish, fail) => {
-      current = { job: { width: W, height: H, fps, duration, words: spec.words, caption: spec.caption }, sink, last: null, frames: 0, onFrame: (n) => onProgress(n / total), finish };
+      current = { job: { width: W, height: H, fps, duration, words: spec.words, caption: spec.caption, brand: spec.brand }, sink, last: null, frames: 0, onFrame: (n) => onProgress(n / total), finish };
       sink.done.catch(fail); // ffmpeg morreu antes de terminar os quadros
       win.webContents.on('render-process-gone', () => fail(new Error('O desenho das legendas parou.')));
       openWorker(win);

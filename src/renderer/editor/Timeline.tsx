@@ -362,7 +362,8 @@ export function Timeline({ clip, words, peaks, player, update, wordSelected, onP
                       <span aria-hidden="true" className="absolute top-0.5 left-1 flex items-center gap-1 text-[10px] font-semibold text-text/80">
                         {mute && (d1 - d0) * pps > 22 && <VolumeX size={12} strokeWidth={1.75} className="text-muted" />}
                         {p.g > 0 && (d1 - d0) * pps > 30 && `C${copyNames.get(p.g)}`}
-                        {p.frame && clip.layout.mode === 'single' && (d1 - d0) * pps > 30 && <span className="rounded-sm bg-black/50 px-1">{t(`editor.frames.short.${presetOf(p.frame)}`)}</span>}
+                        {(p.frame || p.keys?.length) && clip.layout.mode === 'single' && (d1 - d0) * pps > 30 && <span className="rounded-sm bg-black/50 px-1">{t(`editor.frames.short.${presetOf(p.frame, p.keys)}`)}</span>}
+                        {p.zoom && p.zoom !== 1 && clip.layout.mode === 'single' && (d1 - d0) * pps > 56 && <span className="rounded-sm bg-black/50 px-1">{`${Math.round(p.zoom * 100)}%`}</span>}
                       </span>
                     </button>
                   );

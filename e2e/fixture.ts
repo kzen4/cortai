@@ -32,7 +32,7 @@ export function seedProject(HOME: string, opts: { duration?: number; withMedia?:
   });
   const db = new DatabaseSync(join(HOME, 'data', 'cortai.db'));
   db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run('setupDone', 'true');
-  db.prepare('INSERT INTO projects (id, name, dir, status, duration, clip_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+  db.prepare('INSERT OR REPLACE INTO projects (id, name, dir, status, duration, clip_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
     .run(ID, 'Projeto de teste', dir, 'ready', D, 1, now, now);
   db.close();
 }

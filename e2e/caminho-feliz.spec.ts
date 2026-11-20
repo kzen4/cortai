@@ -2,10 +2,10 @@
 // primeiro uso, abre um projeto, entra no editor, duplica um pedaço, desfaz e apaga. Não precisa de modelos
 // nem de internet: o projeto é sintético. Rodar:  npm run build && npm run e2e
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { seedProject } from './fixture';
+import { ID, seedProject } from './fixture';
 
 const HOME = mkdtempSync(join(tmpdir(), 'cortai-e2e-'));
 const errors: string[] = [];
@@ -74,6 +74,23 @@ test('caminho feliz: primeiro uso → projeto → editor → duplicar → desfaz
   await expect(pieces.nth(1)).not.toContainText('E');
   await page.keyboard.press('Control+z'); // desfaz o enquadramento
 
+  // 4b'. Ajustar enquadramento num pedaço (arrasto/setas) fixa só ele; os vizinhos da mesma cópia continuam no rosto
+  await pieces.nth(0).click();
+  await page.getByRole('button', { name: 'Ajustar enquadramento' }).click();
+  await page.getByRole('slider', { name: 'Janela de recorte' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await page.getByRole('button', { name: 'Concluir enquadramento' }).click();
+  await expect(pieces.nth(0)).toContainText('P');
+  await expect(pieces.nth(1)).not.toContainText('P');
+  await page.keyboard.press('Control+z');
+
+  // 4b''. Zoom só de uma parte: as outras ficam com o zoom delas
+  await pieces.nth(0).click();
+  await page.locator('label', { hasText: /^Zoom/ }).locator('input[type=range]').fill('150');
+  await expect(pieces.nth(0)).toContainText('150%');
+  await expect(pieces.nth(1)).not.toContainText('%');
+  await page.keyboard.press('Control+z');
+
   // 4c. Tela + webcam: legenda vai para o meio e aparece o ajuste da janela da webcam
   await page.getByText('Tela + webcam', { exact: true }).click();
   await expect(page.getByRole('button', { name: 'Ajustar janela da webcam' })).toBeVisible();
@@ -88,6 +105,100 @@ test('caminho feliz: primeiro uso → projeto → editor → duplicar → desfaz
   await page.keyboard.press('Delete');
   await expect(pieces).toHaveCount(1);
 
+  expect(errors).toEqual([]);
+  await close(app);
+});
+
+test('templates e brand kit: criar, aplicar no corte', async () => {
+  test.setTimeout(120_000);
+  seedProject(HOME);
+  const { app, page } = await open();
+
+  // template próprio a partir do padrão
+  await page.getByRole('button', { name: 'Templates' }).first().click();
+  await page.getByRole('button', { name: 'Novo template' }).click();
+  await page.getByLabel('Nome').fill('Meu estilo E2E');
+  await page.getByRole('button', { name: 'Salvar', exact: true }).click();
+  await expect(page.getByText('Meu estilo E2E', { exact: true })).toBeVisible();
+
+  // brand kit com esse template e CTA
+  await page.getByRole('button', { name: 'Brand kits' }).first().click();
+  // kit do sistema: já existe e é o primeiro, mas é só exemplo (sem padrão: cortes saem sem logo nem CTA)
+  await expect(page.locator('main li').first()).toContainText('Cortaí');
+  await expect(page.locator('main li').first()).not.toContainText('Padrão');
+  if (process.env.SHOTS) await page.screenshot({ path: join(process.env.SHOTS, 'brandkits-sistema.png') }); // print opcional
+  await page.getByRole('button', { name: 'Novo brand kit' }).click();
+  await page.getByLabel('Nome', { exact: true }).fill('Cliente E2E');
+  await page.getByLabel('Template padrão').selectOption({ label: 'Meu estilo E2E' });
+  await page.getByRole('button', { name: 'Salvar', exact: true }).click();
+  await expect(page.getByText('Cliente E2E', { exact: true })).toBeVisible();
+
+  // no editor: escolher o kit aplica o template dele
+  await page.getByRole('button', { name: 'Início' }).first().click();
+  await page.getByText('Projeto de teste').first().click();
+  await page.getByRole('button', { name: 'Editar' }).first().click();
+  await page.getByRole('tab', { name: 'Layout' }).click();
+  await page.getByLabel('Brand kit').selectOption({ label: 'Cliente E2E' });
+  await page.getByRole('tab', { name: 'Legenda' }).click();
+  await expect(page.getByRole('combobox', { name: 'Template', exact: true })).toHaveValue(/^t/);
+  // CTA do próprio corte: texto + posição
+  await page.getByRole('tab', { name: 'Layout' }).click();
+  await page.getByLabel('CTA deste corte').fill('Me siga para mais');
+  await page.getByText('Abaixo', { exact: true }).click();
+  await expect(page.getByLabel('CTA deste corte')).toHaveValue('Me siga para mais');
+
+  // tornar padrão / excluir com confirmação; o kit do sistema não tem lixeira
+  await page.getByRole('button', { name: 'Voltar aos resultados' }).click();
+  await page.getByRole('button', { name: 'Brand kits' }).first().click();
+  const cortai = page.locator('main li').filter({ hasText: 'Cortaí' }).first();
+  const cliente = page.locator('main li').filter({ hasText: 'Cliente E2E' });
+  await expect(cortai.getByRole('button', { name: /^Excluir/ })).toHaveCount(0); // o do sistema nunca é apagado
+  await cortai.getByRole('button', { name: 'Tornar padrão' }).click();
+  await expect(cortai.getByText('Padrão', { exact: true })).toBeVisible();
+  await cortai.getByRole('button', { name: 'Remover padrão' }).click();
+  await expect(cortai.getByText('Padrão', { exact: true })).toHaveCount(0);
+  await cliente.getByRole('button', { name: 'Tornar padrão' }).click();
+  await expect(cliente.getByText('Padrão', { exact: true })).toBeVisible();
+  if (process.env.SHOTS) await page.screenshot({ path: join(process.env.SHOTS, 'kits-padrao.png') });
+  await cliente.getByRole('button', { name: 'Excluir Cliente E2E' }).click();
+  await expect(page.getByRole('alertdialog')).toContainText('sem brand kit');
+  await page.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(cliente).toHaveCount(1);
+  await cliente.getByRole('button', { name: 'Excluir Cliente E2E' }).click();
+  await page.getByRole('button', { name: 'Excluir definitivamente' }).click();
+  await expect(cliente).toHaveCount(0);
+  await expect(page.getByText('Padrão', { exact: true })).toHaveCount(0); // sem padrão de novo
+
+  expect(errors).toEqual([]);
+  await close(app);
+});
+
+test('excluir projeto: confirmação e apaga tudo (projeto, cortes e exportados)', async () => {
+  test.setTimeout(120_000);
+  seedProject(HOME);
+  const out = join(HOME, 'Videos', 'Projeto de teste');
+  mkdirSync(out, { recursive: true });
+  const files = ['01 - Corte de teste.mp4', '01 - Corte de teste.srt', '01 - Corte de teste.txt'].map((f) => join(out, f));
+  for (const f of files) writeFileSync(f, 'x');
+  writeFileSync(join(HOME, 'projects', ID, 'exports.json'), JSON.stringify({ schemaVersion: 1, files: [files[0]] }));
+  const { app, page } = await open();
+  await page.getByRole('button', { name: 'Projetos' }).first().click();
+
+  // cancelar não apaga nada
+  await page.getByRole('button', { name: 'Excluir o projeto Projeto de teste' }).click();
+  await expect(page.getByRole('alertdialog')).toContainText('eliminados em definitivo');
+  if (process.env.SHOTS) await page.screenshot({ path: join(process.env.SHOTS, 'excluir-projeto.png') }); // print opcional
+  await page.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(page.getByText('Projeto de teste')).toBeVisible();
+  expect(existsSync(join(HOME, 'projects', ID))).toBe(true);
+
+  // confirmar apaga o projeto inteiro e os arquivos exportados
+  await page.getByRole('button', { name: 'Excluir o projeto Projeto de teste' }).click();
+  await page.getByRole('button', { name: 'Excluir definitivamente' }).click();
+  await expect(page.getByText('Projeto de teste')).toHaveCount(0);
+  expect(existsSync(join(HOME, 'projects', ID))).toBe(false);
+  expect(files.map(existsSync)).toEqual([false, false, false]);
+  expect(existsSync(out)).toBe(false);
   expect(errors).toEqual([]);
   await close(app);
 });

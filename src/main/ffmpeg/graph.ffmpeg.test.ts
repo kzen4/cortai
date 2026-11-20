@@ -6,7 +6,9 @@ import { buildGraph } from './graph';
 const temFfmpeg = spawnSync('ffmpeg', ['-version']).status === 0;
 const base = {
   in: 0, out: 6, cuts: [] as [number, number][], wordEdits: {},
-  order: [{ a: 0, b: 2, g: 0 }, { a: 2, b: 4, g: 0, frame: { x: 0, y: 0.5 } }, { a: 1, b: 3, g: 1 }],
+  order: [ // pedaço com movimento próprio, pedaço fixo com zoom 2×, cópia
+    { a: 0, b: 2, g: 0, keys: [{ t: 0, x: 0.1, y: 0.5, zoom: 1, ease: 'smooth' as const, auto: false }, { t: 2, x: 0.9, y: 0.5, zoom: 1, ease: 'smooth' as const, auto: false }] },
+    { a: 2, b: 4, g: 0, frame: { x: 0, y: 0.5 }, zoom: 2 }, { a: 1, b: 3, g: 1 }],
   copies: { 1: { wordEdits: {}, reframe: [{ t: 0, x: 0.8, y: 0.5, zoom: 1.2, ease: 'smooth' as const, auto: false }] } },
   reframe: [{ t: 0, x: 0.3, y: 0.5, zoom: 1, ease: 'smooth' as const, auto: true }],
   audio: { speechGain: 1, denoise: false },
@@ -21,6 +23,7 @@ for (const mode of ['single', 'blur-bg', 'color-bg', 'screen-face'] as const) {
       '-f', 'lavfi', '-i', 'color=c=black@0.0:s=1080x1920:d=6,format=rgba',
       '-filter_complex', graph, '-map', '[v]', '-map', '[a]', '-t', '1', '-f', 'null', '-']);
     expect(String(r.stderr)).toBe('');
+    if (mode === 'single') expect(new Set(graph.match(/crop=\d+:\d+/g)).size).toBe(3); // zoom 1, 2 e 1,2 (cópia): 3 recortes
     expect(r.status).toBe(0);
   }, 30_000);
 }

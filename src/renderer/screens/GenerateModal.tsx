@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock, Hash, Languages, Scissors, Sparkles, X } from 'lucide-react';
-import { chunkWords } from '@shared/captions';
-import { POC_DURATION, POC_WORDS } from '@shared/poc';
-import { CAPTION_TEMPLATES, DEFAULT_TEMPLATE } from '@shared/templates';
+import { Clock, Hash, Languages, Palette, Scissors, Sparkles, X } from 'lucide-react';
+import { allKits, allTemplates, defaultKitId, findKit } from '@shared/library';
+import { DEFAULT_TEMPLATE } from '@shared/templates';
 import type { AspectRatio, GenerationSettings, SourceInfo } from '@shared/types';
 import { Button, Field, IconButton, Modal, Segmented, fmtDuration, inputCls, selectCls, textareaCls } from '../components/ui';
-import { drawOverlay, loadCaptionFont } from '../overlay/drawOverlay';
+import { TemplatePreview } from '../components/TemplatePreview';
+import { useLibrary } from '../app/library';
 
 const DURATIONS: Record<string, GenerationSettings['targetDuration']> = { auto: 'auto', '<30s': [10, 30], '30–60s': [30, 60], '60–90s': [60, 90], '90s–3min': [90, 180] };
 const CHIPS = ['fun', 'polemic', 'tips', 'stories', 'quotes'] as const;
@@ -20,10 +20,32 @@ export function GenerateModal({ sources, gpu, onClose, onCreated }: { sources: S
   const [start, setStart] = useState('0:00');
   const [end, setEnd] = useState(toClock(first.duration));
   const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const lib = useLibrary();
+  const templates = allTemplates(lib?.templates);
+  // sem escolha = o kit padrão (Brand kits → Tornar padrão; senão o Cortaí); '' = o usuário escolheu "Nenhum"
+  const kitId = gen.brandKitId === '' ? undefined : findKit(gen.brandKitId ?? defaultKitId(lib), lib?.kits)?.id;
+  const tplId = templates.some((x) => x.id === gen.captionTemplateId) ? gen.captionTemplateId : DEFAULT_TEMPLATE;
+  const setKit = (id: string) => {
+    const k = findKit(id, lib?.kits);
+    setGen({ ...gen, brandKitId: id, captionTemplateId: k?.templateId ?? gen.captionTemplateId });
+  };
 
   useEffect(() => {
-    window.cortai.settings.get().then((s) => s.lastGeneration && setGen({ ...s.lastGeneration, range: undefined, prompt: undefined }));
+    // lembra as últimas escolhas, menos o kit: cada geração nova começa no kit padrão
+    window.cortai.settings.get().then((s) => {
+      if (s.lastGeneration) setGen({ ...s.lastGeneration, brandKitId: undefined, range: undefined, prompt: undefined });
+      setLoaded(true);
+    });
   }, []);
+  // ...e com o template do kit padrão (uma vez, depois das duas leituras)
+  const applied = useRef(false);
+  useEffect(() => {
+    if (!lib || !loaded || applied.current) return;
+    applied.current = true;
+    const tpl = findKit(defaultKitId(lib), lib.kits)?.templateId;
+    if (tpl) setGen((g) => ({ ...g, captionTemplateId: tpl }));
+  }, [lib, loaded]);
 
   const durKey = Object.keys(DURATIONS).find((k) => JSON.stringify(DURATIONS[k]) === JSON.stringify(gen.targetDuration)) ?? 'auto';
   const a = toSec(start), b = toSec(end);
@@ -43,7 +65,7 @@ export function GenerateModal({ sources, gpu, onClose, onCreated }: { sources: S
     setBusy(true);
     const full = a === 0 && b! >= Math.floor(first.duration);
     const ids: string[] = [];
-    for (const src of sources) ids.push(await window.cortai.projects.create(src, { ...gen, range: sources.length === 1 && !full ? [a!, b!] : undefined, prompt: gen.prompt?.trim() || undefined }));
+    for (const src of sources) ids.push(await window.cortai.projects.create(src, { ...gen, captionTemplateId: tplId, brandKitId: kitId ?? '', range: sources.length === 1 && !full ? [a!, b!] : undefined, prompt: gen.prompt?.trim() || undefined }));
     onCreated(ids);
   };
 
@@ -106,14 +128,22 @@ export function GenerateModal({ sources, gpu, onClose, onCreated }: { sources: S
               options={Object.keys(DURATIONS).map((k) => ({ value: k, label: k === 'auto' ? t('gen.auto') : k }))} />
             <Segmented<AspectRatio> label={t('gen.format')} value={gen.aspect} onChange={(v) => setGen({ ...gen, aspect: v })}
               options={(['9:16', '1:1', '4:5', '16:9'] as const).map((v) => ({ value: v, label: v }))} />
+            {lib && (
+              <Field label={t('brand.kit')} icon={Palette}>
+                <select className={selectCls} value={kitId ?? ''} onChange={(e) => setKit(e.target.value)}>
+                  <option value="">{t('brand.none')}</option>
+                  {allKits(lib.kits).map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+                </select>
+              </Field>
+            )}
             <fieldset>
               <legend className="mb-2 text-[12px] font-medium text-muted">{t('gen.template')}</legend>
-              <div className="flex gap-3">
-                {Object.keys(CAPTION_TEMPLATES).map((id) => (
-                  <label key={id} className={`flex cursor-pointer flex-col items-center gap-1.5 rounded-button border p-2 has-[:focus-visible]:shadow-[var(--focus-ring)] ${gen.captionTemplateId === id ? 'border-primary' : 'border-border'}`}>
-                    <input type="radio" className="sr-only" checked={gen.captionTemplateId === id} onChange={() => setGen({ ...gen, captionTemplateId: id })} />
-                    <TemplatePreview id={id} />
-                    <span className="text-[12px] font-medium capitalize">{id}</span>
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {templates.map((x) => (
+                  <label key={x.id} className={`flex w-[81px] shrink-0 cursor-pointer flex-col items-center gap-1.5 rounded-button border p-2 has-[:focus-visible]:shadow-[var(--focus-ring)] ${tplId === x.id ? 'border-primary' : 'border-border'}`}>
+                    <input type="radio" className="sr-only" checked={tplId === x.id} onChange={() => setGen({ ...gen, captionTemplateId: x.id })} />
+                    <TemplatePreview style={x.style} play={tplId === x.id} width={63} />
+                    <span className="w-full truncate text-center text-[12px] font-medium">{x.name}</span>
                   </label>
                 ))}
               </div>
@@ -128,25 +158,4 @@ export function GenerateModal({ sources, gpu, onClose, onCreated }: { sources: S
       </form>
     </Modal>
   );
-}
-
-/** Mini-preview animado do template: a mesma função de desenho do export (respeita "reduzir movimento"). */
-function TemplatePreview({ id }: { id: string }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  const input = useMemo(() => ({ chunks: chunkWords(POC_WORDS, CAPTION_TEMPLATES[id].wordsPerLine), caption: { ...CAPTION_TEMPLATES[id], positionY: 50, size: CAPTION_TEMPLATES[id].size * 1.8 } }), [id]);
-  useEffect(() => {
-    const c = ref.current!;
-    c.width = 108 * 2; c.height = 192 * 2;
-    const ctx = c.getContext('2d')!;
-    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let raf = 0;
-    const t0 = performance.now();
-    const frame = (now: number) => {
-      drawOverlay(ctx, input, still ? 2.2 : ((now - t0) / 1000) % POC_DURATION);
-      if (!still) raf = requestAnimationFrame(frame);
-    };
-    loadCaptionFont(input.caption).then(() => { raf = requestAnimationFrame(frame); });
-    return () => cancelAnimationFrame(raf);
-  }, [input]);
-  return <canvas ref={ref} aria-hidden="true" className="h-[112px] w-[63px] rounded-input bg-gradient-to-b from-[#2a2a36] to-[#0b0b0f]" />;
 }

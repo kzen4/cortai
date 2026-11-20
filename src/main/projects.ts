@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { SCHEMA_VERSION } from '@shared/constants';
 import type { Clip, FoundClip, GenerationSettings, Project, ProjectSummary, SourceInfo, Transcript } from '@shared/types';
 import { db, now } from './db';
@@ -54,8 +54,30 @@ export function listProjects(): ProjectSummary[] {
   }));
 }
 
+/**
+ * Apaga o projeto inteiro e de vez: pasta do projeto (cortes, edições, cache, vídeo baixado de link) e os arquivos já
+ * exportados (.mp4/.srt/.txt), achados pelo histórico de exportações dele — outro projeto com o mesmo nome não é tocado.
+ * O vídeo original que o usuário importou do computador fica (é dele).
+ */
+const exportsFile = (id: string) => join(projectDir(id), 'exports.json');
+/** Anota um arquivo exportado (o histórico da fila pode ser limpo pelo usuário; este não). */
+export function recordExport(id: string, mp4: string) {
+  const list = existsSync(exportsFile(id)) ? readJson<{ files: string[] }>(exportsFile(id)).files : [];
+  if (!list.includes(mp4)) writeJson(exportsFile(id), { files: [...list, mp4] });
+}
+
 export function deleteProject(id: string) {
-  rmSync(projectDir(id), { recursive: true, force: true });
+  const fromJobs = (db.prepare("SELECT payload FROM jobs WHERE project_id = ? AND kind = 'render' AND payload IS NOT NULL").all(id) as { payload: string }[])
+    .map((r) => (JSON.parse(r.payload) as { outPath?: string }).outPath).filter((p): p is string => !!p);
+  let recorded: string[] = [];
+  try { recorded = readJson<{ files: string[] }>(exportsFile(id)).files; } catch { /* projeto sem exports */ }
+  for (const mp4 of new Set([...fromJobs, ...recorded])) {
+    const base = mp4.replace(/\.mp4$/i, '');
+    for (const f of [mp4, `${base}.part.mp4`, `${base}.srt`, `${base}.txt`]) rmSync(f, { force: true });
+    const dir = dirname(mp4);
+    try { if (existsSync(dir) && !readdirSync(dir).length) rmdirSync(dir); } catch { /* pasta em uso: fica vazia */ }
+  }
+  rmSync(projectDir(id), { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); // ffmpeg cancelado pode demorar a soltar o arquivo
   db.prepare('DELETE FROM jobs WHERE project_id = ?').run(id);
   db.prepare('DELETE FROM projects WHERE id = ?').run(id);
 }

@@ -75,6 +75,9 @@ prioridade sobre a do PATH. Modelos e perfis: `engine/models.json`; prompt da an
     Testado ao vivo instalado: instala, abre, componentes, motor instalado pelo assistente, editor, duplicar; e
     atualização 0.0.1 → 0.1.0 por cima mantendo o motor. Gotcha: winCodeSign do electron-builder falha ao extrair
     (symlinks do macOS) → extrair o .7z com `7za x -snld` em `%LOCALAPPDATA%\electron-builder\Cache\winCodeSign\winCodeSign-2.6.0`.
+  - Ícone: a janela recebe `icon` (resources/icons/icon.ico; instalado vem de extraResources `icons/`) e `app.setAppUserModelId('br.lab.cortai')`
+    (= appId do instalador). Sem isso, em dev (electron.exe) a janela mostrava o ícone do Electron. O .exe instalado e o atalho
+    `Cortaí.lnk` na área de trabalho (nsis.createDesktopShortcut) já usavam o ícone do Cortaí (conferido 2026-11-20).
   - Atualização automática: `src/main/updater.ts` (electron-updater 6.3.9, GitHub Releases; procura ao abrir e a cada
     6 h, baixa sozinho, botão "Reiniciar e atualizar" na barra de título; em dev não faz nada).
   - Release: `.github/workflows/release.yml` (tag `v*` → build + `electron-builder --publish always`).
@@ -101,6 +104,41 @@ prioridade sobre a do PATH. Modelos e perfis: `engine/models.json`; prompt da an
     cortes (`detectCornerWebcam`: rosto parado perto de um canto → já nasce em tela + webcam); heurística simples.
   - Rótulos do filtergraph agora são únicos por pedaço (`layoutFilter(..., k)`): fundo desfocado com vários pedaços repetia rótulos.
   - Testes: `graph.ffmpeg.test.ts` roda os 4 layouts com 3 pedaços no ffmpeg real (pula sem ffmpeg); E2E cobre E/C/D e tela + webcam.
+  - **Ajustar enquadramento = só o pedaço** (corrigido 2026-11-20 a pedido): antes, num pedaço em "seguir rosto" o arrasto/Fixar/
+    Centralizar gravava nos keyframes da CÓPIA e vazava para os outros pedaços divididos (todos são g 0). Agora `framePieceFrom()`
+    transforma qualquer ajuste em enquadramento fixo do pedaço (marca P na timeline); "Seguir rosto" devolve só ele. Teste em timeline.test.ts + E2E.
+  - **Templates e Brand kits** (2026-11-20, SPEC §4.8/§6.8): telas `screens/Templates.tsx` (galeria prontos + meus, prévia anima no
+    hover, editor com `components/CaptionControls.tsx` — o mesmo do Inspector) e `screens/BrandKits.tsx` (logo + posição/tamanho/opacidade,
+    paleta → sugestões nos seletores de cor via datalist, fontes próprias .ttf/.otf/.woff2, template padrão, CTA final nos últimos N s).
+    Guardados nas configurações (`captionTemplates`, `brandKits`; estado único em `renderer/app/library.ts`); arquivos como data URL
+    (não "sujam" o canvas do export e o .cortai-template é um JSON só — sem zip). Lógica/validação em `shared/library.ts` (importação
+    confere tudo: cores, data URLs, nome de fonte). Template é copiado para o corte (editar depois não muda cortes antigos); **brand kit é
+    vivo** (`clip.brandKitId`, resolvido na prévia/Resultados/export — editar o kit muda todos os cortes dele). Logo e CTA são desenhados
+    no `drawOverlay` (`drawBrand`), então prévia = export; `overlayKey` inclui a fase do CTA. Gerar cortes: escolher kit aplica o template
+    do kit. Editor: "Salvar este estilo como template" e seletor de kit na aba Layout. Botão "Criar exemplo do Cortaí" (`exampleKit`).
+    Verificado: tsc, 46 unit, E2E (criar template/kit/exemplo, aplicar no editor) e export real (logo em todo o vídeo, CTA só no fim).
+    Fora: intro/outro (vídeos concatenados) e cards — ficam para depois.
+  - **Movimento e zoom por pedaço** (2026-11-20, a pedido): `EditItem.keys` (keyframes próprios, t em segundos do ORIGINAL — sobrevivem a
+    mudar o início do corte) e `EditItem.zoom`. Prioridade em `framingFor`: keys > frame (E/C/D) > keyframes da cópia; zoom do pedaço >
+    zoom da cópia. "Ajustar enquadramento" grava keys só no pedaço (arrastar em instantes diferentes = movimento; Fixar = 1 ponto);
+    Zoom no painel Layout vale para os pedaços selecionados/do playhead (`setPieceZoom`); timeline mostra P e o %. Export: cada pedaço já
+    tem o próprio crop (`layoutFilter` por pedaço) — testado no ffmpeg real com 3 zooms. Dividir mantém keys e zoom nas duas metades.
+  - **Kit do sistema "Cortaí"** (`BUILTIN_KITS` em shared/library.ts, id `cortai`): sempre existe, primeiro da lista, selo "Padrão",
+    não edita/apaga (duplicar para personalizar). Padrão ao gerar: `GenerationSettings.brandKitId` ausente = Cortaí, `''` = nenhum (salvo
+    em lastGeneration). Template pronto `cortai` virou o `DEFAULT_TEMPLATE`. Cortes antigos (sem brandKitId) não ganham o kit sozinhos.
+- **Kit padrão e excluir kit** (2026-11-20, a pedido): "Tornar padrão" em qualquer kit (só aparece em quem não é o padrão; selo
+  "Padrão" no atual) → `Library.defaultKit` = configuração `defaultBrandKitId` ('' = Cortaí). Excluir kit do usuário com confirmação
+  (lixeira no card e no editor do kit; `removeKit`: excluir o padrão devolve ao Cortaí). Cortaí nunca tem lixeira. Gerar cortes: começa
+  sempre no kit padrão + template dele (`defaultKitId`; o kit da última geração não é lembrado). E2E cobre tornar padrão/cancelar/excluir.
+- **Sem marca d'água por padrão** (2026-11-20, decisão do usuário p/ o beta): o kit Cortaí é só EXEMPLO; padrão = nenhum kit
+  (`defaultKitId` → undefined). Qualquer kit (inclusive o Cortaí) pode "Tornar padrão"; o padrão tem "Remover padrão". CTA do próprio
+  corte (`clip.cta` {text, positionY}; aba Layout): sem kit usa o visual do Cortaí, com kit vence o texto/posição do kit (`clipBrand`,
+  fonte única p/ prévia/Resultados/export). Posições: logo em 4 cantos; CTA Acima/Abaixo (`CTA_POS` 18/86).
+- **Excluir projeto** (2026-11-20, a pedido): `components/DeleteProject.tsx` (lixeira no card do projeto em Início/Projetos, botão nos
+  Resultados e no Processamento) com confirmação em modal (foco em Cancelar, aviso com a quantidade de cortes). Confirmar apaga TUDO:
+  pasta do projeto e os arquivos exportados (.mp4/.part.mp4/.srt/.txt) achados pelo histórico da fila + `exports.json` do projeto
+  (`recordExport` a cada export — sobrevive ao "Limpar" das Exportações); pasta de saída vazia é removida. Nunca apaga o vídeo
+  original importado do computador. E2E cobre cancelar (nada some) e confirmar (projeto + 3 arquivos somem).
 - [ ] Resto da Fase 4 (V1) · Fase 5 (V2).
 
 Fase 2 medida: corte de 3 min tocando a ~120 fps (tela 120 Hz), 0/270 quadros de vídeo perdidos; volume -14,7 LUFS

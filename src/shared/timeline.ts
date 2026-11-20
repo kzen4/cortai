@@ -102,7 +102,7 @@ export function subtractRange(cuts: Seg[], [a, b]: Seg): Seg[] {
 type EditClip = Pick<Clip, 'in' | 'out' | 'cuts' | 'order' | 'splits'>;
 type CopyClip = Pick<Clip, 'wordEdits' | 'reframe' | 'copies'>;
 type OrderClip = EditClip & CopyClip;
-export interface Piece { a: number; b: number; entry: number; g: number; muted: boolean; frame?: PieceFrame } // a, b em rel; entry = índice no order
+export interface Piece { a: number; b: number; entry: number; g: number; muted: boolean; frame?: PieceFrame; keys?: ReframeKeyframe[]; zoom?: number } // a, b em rel; entry = índice no order
 
 /** Itens da lista (segundos do original). */
 export function orderItems(clip: EditClip): EditItem[] {
@@ -115,7 +115,7 @@ export function orderItems(clip: EditClip): EditItem[] {
 
 /** Pedaços do vídeo final, na ordem. */
 export const clipPieces = (clip: EditClip): Piece[] =>
-  orderItems(clip).map((it, entry) => ({ a: it.a - clip.in, b: it.b - clip.in, entry, g: it.g ?? 0, muted: !!it.muted, frame: it.frame }));
+  orderItems(clip).map((it, entry) => ({ a: it.a - clip.in, b: it.b - clip.in, entry, g: it.g ?? 0, muted: !!it.muted, frame: it.frame, keys: it.keys, zoom: it.zoom }));
 
 /** Lista de edição (rel): o que toca, na ordem. É a base do preview, das legendas e do export. */
 export const editList = (clip: EditClip): Seg[] => clipPieces(clip).map((p): Seg => [p.a, p.b]);
@@ -192,7 +192,7 @@ export function removeFromPieces<C extends OrderClip>(c: C, parts: { entry: numb
 export interface Clipboard { items: EditItem[]; data: Record<number, CopyEdits> }
 export function copyPieces(c: OrderClip, ps: Piece[]): Clipboard {
   return {
-    items: ps.map((p) => ({ a: c.in + p.a, b: c.in + p.b, g: p.g, ...(p.muted ? { muted: true } : {}), ...(p.frame ? { frame: p.frame } : {}) })),
+    items: ps.map((p) => ({ a: c.in + p.a, b: c.in + p.b, g: p.g, ...(p.muted ? { muted: true } : {}), ...(p.frame ? { frame: p.frame } : {}), ...(p.keys ? { keys: p.keys } : {}), ...(p.zoom ? { zoom: p.zoom } : {}) })),
     data: Object.fromEntries([...new Set(ps.map((p) => p.g))].map((g) => [g, copyData(c, g)])),
   };
 }
@@ -269,20 +269,43 @@ export function setOut<C extends OrderClip>(c: C, v: number): C {
 /** Posições prontas do enquadramento de um pedaço (x do centro da janela; y no meio). */
 export const FRAME_PRESETS = { left: { x: 0, y: 0.5 }, center: { x: 0.5, y: 0.5 }, right: { x: 1, y: 0.5 } } as const;
 export type FramePreset = keyof typeof FRAME_PRESETS;
-export const presetOf = (f?: PieceFrame): FramePreset | 'auto' | 'custom' =>
-  !f ? 'auto' : (Object.entries(FRAME_PRESETS).find(([, v]) => v.x === f.x && v.y === f.y)?.[0] as FramePreset) ?? 'custom';
+export const presetOf = (f?: PieceFrame, keys?: ReframeKeyframe[]): FramePreset | 'auto' | 'custom' =>
+  keys?.length ? 'custom' : !f ? 'auto' : (Object.entries(FRAME_PRESETS).find(([, v]) => v.x === f.x && v.y === f.y)?.[0] as FramePreset) ?? 'custom';
 
-/** O corte visto por um pedaço: enquadramento da cópia dele ou, se o pedaço tiver um fixo, esse (com o zoom da cópia). */
-export function framingFor<C extends CopyClip>(clip: C, p: { g: number; frame?: PieceFrame }): C {
+type PieceView = { g: number; frame?: PieceFrame; keys?: ReframeKeyframe[]; zoom?: number };
+/**
+ * O corte visto por um pedaço (keyframes em rel): o movimento próprio dele (keys), senão o fixo (frame), senão os
+ * keyframes da cópia. Zoom: o do pedaço, senão o da cópia. Fonte única para prévia, Resultados e export.
+ */
+export function framingFor<C extends CopyClip & Pick<Clip, 'in'>>(clip: C, p: PieceView): C {
   const v = forCopy(clip, p.g);
-  if (!p.frame) return v;
-  const zoom = v.reframe[0]?.zoom ?? 1;
-  return { ...v, reframe: [{ t: 0, x: p.frame.x, y: p.frame.y, zoom, ease: 'linear', auto: false }] };
+  const zoom = p.zoom ?? v.reframe[0]?.zoom ?? 1;
+  const reframe = p.keys?.length ? p.keys.map((k) => ({ ...k, t: k.t - clip.in, zoom }))
+    : p.frame ? [{ t: 0, x: p.frame.x, y: p.frame.y, zoom, ease: 'linear' as const, auto: false }]
+    : p.zoom ? v.reframe.map((k) => ({ ...k, zoom })) : v.reframe;
+  return { ...v, reframe };
 }
 
-/** Fixa (ou volta para "seguir rosto", com undefined) o enquadramento dos pedaços indicados. */
+const mapEntries = <C extends OrderClip>(c: C, entries: number[], fn: (it: EditItem) => EditItem): C =>
+  ({ ...c, order: c.order?.map((it, k) => (entries.includes(k) ? fn(it) : it)) });
+
+/** Fixa numa posição pronta (ou volta para "seguir rosto", com undefined) os pedaços indicados; apaga o movimento próprio. */
 export const setPieceFrame = <C extends OrderClip>(c: C, entries: number[], frame: PieceFrame | undefined): C =>
-  ({ ...c, order: c.order?.map((it, k) => (entries.includes(k) ? { ...it, frame } : it)) });
+  mapEntries(c, entries, ({ keys: _k, ...it }) => ({ ...it, frame }));
+
+/** Zoom próprio dos pedaços indicados (os outros mantêm o deles). */
+export const setPieceZoom = <C extends OrderClip>(c: C, entries: number[], zoom: number): C =>
+  mapEntries(c, entries, (it) => ({ ...it, zoom }));
+
+/**
+ * "Ajustar enquadramento" num pedaço: r = keyframes (rel) vistos pelo pedaço depois do arrasto/fixar/centralizar.
+ * Viram o movimento próprio SÓ desse pedaço (arrastar em instantes diferentes = movimento; fixar = 1 ponto).
+ * Keyframes todos automáticos (= "Seguir rosto") devolvem o pedaço à cópia. Pedaços vizinhos nunca mudam.
+ */
+export function framePieceFrom<C extends OrderClip>(c: C, entry: number, r: ReframeKeyframe[]): C {
+  if (r.every((k) => k.auto)) return setPieceFrame(c, [entry], undefined);
+  return mapEntries(c, [entry], ({ frame: _f, ...it }) => ({ ...it, keys: r.map(({ zoom: _z, ...k }) => ({ ...k, zoom: 1, t: k.t + c.in })) }));
+}
 
 // ---- Tela + webcam --------------------------------------------------------------------------------------
 // Formato final dividido ao meio: em cima o vídeo inteiro (encaixado), embaixo a janela da webcam ampliada.
