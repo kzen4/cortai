@@ -39,3 +39,4 @@ publish:
   provider: github
   owner: kzen4
   repo: cortai
+  releaseType: release   # sem isto sai como rascunho e o link "última versão" do site não acha
