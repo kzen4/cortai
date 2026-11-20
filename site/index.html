@@ -38,6 +38,7 @@ nav.links a{text-decoration:none;color:var(--muted);transition:color .15s}
 nav.links a:hover{color:var(--text)}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:12px 22px;border-radius:var(--r-button);font-weight:600;text-decoration:none;transition:filter .15s,background-color .15s}
+button.btn{font:inherit;font-weight:600;border:0;background:none;color:inherit;cursor:pointer}
 .btn.primary{background:var(--primary);color:var(--on-primary)}
 .btn.primary:hover{filter:brightness(1.08)}
 .btn.ghost{border:1px solid var(--border);color:var(--text)}
@@ -93,6 +94,19 @@ section.sec{padding:64px 0}
 .final{text-align:center;padding:72px 0}
 .final h2{font-size:clamp(1.8rem,4vw,2.6rem);margin-bottom:14px}
 .final p{color:var(--muted);margin-bottom:26px}
+/* apoio (mesma seção do POLISMap, com a identidade do Cortaí) */
+.apoie{padding:72px 0;border-top:1px solid var(--border)}
+.apoie .wrap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:clamp(28px,5vw,72px);align-items:center}
+.apoie .qr{background:#fff;border-radius:var(--r-panel);padding:14px;line-height:0;box-shadow:0 0 0 1px var(--border),0 30px 80px -30px rgba(198,244,50,.45)}
+.apoie .qr svg{width:220px;height:220px;display:block}
+.apoie .olho{display:inline-flex;align-items:center;gap:8px;color:var(--primary);font:600 13px Inter,sans-serif;letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
+.apoie h2{font-size:clamp(1.6rem,3.6vw,2.4rem);margin-bottom:14px}
+.apoie .lead{color:var(--muted);max-width:60ch}
+.apoie .lead b{color:var(--text);font-weight:600}
+.apoie .chave{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:28px}
+.apoie code{font:500 15px/1 ui-monospace,'JetBrains Mono',Consolas,monospace;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;overflow-wrap:anywhere}
+#toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,16px);opacity:0;transition:.25s;z-index:100;background:var(--surface);border:1px solid var(--primary);color:var(--text);padding:12px 18px;border-radius:var(--r-button);font-size:14px;pointer-events:none}
+#toast.show{opacity:1;transform:translate(-50%,0)}
 footer{border-top:1px solid var(--border);padding:28px 0;color:var(--muted);font-size:14px}
 footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between;align-items:center}
 footer a{color:var(--muted)}
@@ -101,6 +115,9 @@ footer a:hover{color:var(--text)}
   nav.links{display:none}
   header.top .btn{margin-left:auto}
   .steps,.feats,.req,.demo{grid-template-columns:1fr}
+  .apoie .wrap{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}
+  .apoie .chave{justify-content:center}
+  .apoie .lead{margin:0 auto}
   .hero{padding-top:48px}
 }
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
@@ -122,14 +139,15 @@ footer a:hover{color:var(--text)}
   <symbol id="text-cursor" viewBox="0 0 24 24"><path d="M17 22h-1a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4h1"/><path d="M7 22h1a4 4 0 0 0 4-4v-1"/><path d="M7 2h1a4 4 0 0 1 4 4v1"/></symbol>
   <symbol id="copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
   <symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
-  <symbol id="chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+<symbol id="chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
 </svg>
 
 <header class="top">
   <div class="wrap">
     <a class="logo" href="#"><img src="assets/icon.png" alt="" width="28" height="28"><span>Cortaí<b>.</b></span></a>
     <nav class="links" aria-label="Seções">
-      <a href="#como">Como funciona</a><a href="#recursos">Recursos</a><a href="#requisitos">Requisitos</a><a href="#faq">Dúvidas</a>
+      <a href="#como">Como funciona</a><a href="#recursos">Recursos</a><a href="#requisitos">Requisitos</a><a href="#faq">Dúvidas</a><a href="#apoie">Apoie</a>
     </nav>
     <a class="btn primary small" href="https://github.com/kzen4/cortai/releases/latest"><svg class="i" aria-hidden="true"><use href="#download"/></svg>Baixar</a>
   </div>
@@ -229,6 +247,19 @@ footer a:hover{color:var(--text)}
       <a class="btn primary" href="https://github.com/kzen4/cortai/releases/latest"><svg class="i" aria-hidden="true"><use href="#download"/></svg>Baixar para Windows</a>
     </div>
   </section>
+  <section class="apoie" id="apoie"><div class="wrap">
+    <div class="qr" role="img" aria-label="QR Code Pix para apoiar o Cortaí"><svg viewBox="0 0 53 53" class="segno" aria-hidden="true"><path fill="#fff" d="M0 0h53v53h-53z"/><path class="qrline" stroke="#000" d="M2 2.5h7m3 0h2m1 0h5m1 0h1m5 0h5m2 0h1m1 0h1m5 0h1m1 0h7m-49 1h1m5 0h1m6 0h2m1 0h1m2 0h1m1 0h4m3 0h1m1 0h4m1 0h1m2 0h3m1 0h1m5 0h1m-49 1h1m1 0h3m1 0h1m1 0h1m2 0h1m4 0h1m1 0h1m1 0h2m2 0h1m1 0h2m2 0h1m2 0h1m1 0h1m3 0h2m1 0h1m1 0h3m1 0h1m-49 1h1m1 0h3m1 0h1m1 0h2m1 0h4m3 0h1m2 0h3m7 0h1m1 0h2m1 0h1m2 0h1m2 0h1m1 0h3m1 0h1m-49 1h1m1 0h3m1 0h1m1 0h1m2 0h3m2 0h15m2 0h1m1 0h3m4 0h1m1 0h3m1 0h1m-49 1h1m5 0h1m1 0h1m4 0h2m2 0h1m2 0h3m3 0h1m4 0h1m1 0h2m2 0h2m3 0h1m5 0h1m-49 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-41 1h1m3 0h3m4 0h2m1 0h1m3 0h1m1 0h1m1 0h3m2 0h1m1 0h1m1 0h2m-41 1h1m1 0h5m3 0h1m1 0h5m1 0h3m1 0h6m1 0h1m6 0h1m1 0h1m1 0h1m1 0h5m-47 1h3m5 0h3m3 0h2m1 0h2m2 0h2m4 0h2m1 0h1m1 0h2m5 0h1m2 0h1m1 0h1m2 0h1m-48 1h2m1 0h1m2 0h3m1 0h1m2 0h2m3 0h3m2 0h1m1 0h2m2 0h1m4 0h6m1 0h1m2 0h1m3 0h1m-46 1h1m4 0h3m1 0h2m4 0h2m4 0h2m2 0h1m1 0h1m1 0h2m1 0h1m6 0h4m-42 1h6m1 0h2m1 0h3m1 0h2m1 0h1m1 0h4m2 0h3m1 0h1m1 0h2m3 0h3m3 0h3m-49 1h1m6 0h3m7 0h1m3 0h1m1 0h1m5 0h2m1 0h2m5 0h1m2 0h2m1 0h1m1 0h1m-47 1h1m1 0h1m1 0h2m2 0h3m6 0h2m4 0h5m1 0h3m1 0h1m1 0h4m1 0h1m2 0h2m2 0h1m-49 1h3m1 0h1m3 0h1m2 0h2m5 0h1m2 0h1m1 0h1m6 0h2m1 0h1m2 0h1m2 0h7m2 0h1m-49 1h4m1 0h4m3 0h1m1 0h1m1 0h1m1 0h3m3 0h1m1 0h2m1 0h2m5 0h1m3 0h3m3 0h1m1 0h1m-45 1h2m1 0h1m2 0h5m8 0h3m4 0h2m1 0h1m2 0h1m2 0h1m2 0h2m1 0h1m1 0h1m-45 1h5m1 0h1m1 0h1m1 0h3m1 0h1m5 0h3m1 0h1m1 0h2m5 0h4m1 0h1m3 0h1m2 0h1m-49 1h3m1 0h2m1 0h2m1 0h1m2 0h1m1 0h1m1 0h1m3 0h1m1 0h1m4 0h1m1 0h2m2 0h2m7 0h3m1 0h2m-49 1h1m2 0h1m1 0h3m1 0h2m3 0h1m3 0h3m1 0h1m1 0h2m1 0h1m1 0h1m1 0h1m1 0h2m1 0h1m3 0h1m1 0h1m3 0h3m-47 1h1m1 0h2m9 0h4m2 0h1m1 0h1m3 0h1m1 0h2m1 0h1m2 0h2m2 0h1m2 0h1m2 0h3m-47 1h2m1 0h5m1 0h2m1 0h2m1 0h1m4 0h7m5 0h6m1 0h6m2 0h1m-48 1h2m1 0h1m3 0h4m1 0h1m2 0h1m1 0h1m2 0h2m3 0h1m1 0h1m2 0h2m5 0h3m3 0h2m2 0h1m-46 1h2m1 0h1m1 0h1m1 0h1m3 0h1m2 0h1m2 0h3m1 0h1m1 0h2m2 0h1m2 0h1m1 0h3m2 0h1m1 0h1m1 0h3m1 0h1m-49 1h1m1 0h1m1 0h1m3 0h2m1 0h2m1 0h1m4 0h1m1 0h2m3 0h1m1 0h1m1 0h1m1 0h2m1 0h2m2 0h2m3 0h2m1 0h1m-48 1h3m1 0h5m1 0h1m2 0h2m2 0h1m1 0h1m2 0h6m1 0h1m3 0h2m1 0h3m1 0h5m1 0h1m1 0h1m-49 1h1m1 0h3m3 0h1m1 0h1m3 0h1m2 0h3m2 0h1m1 0h2m1 0h2m3 0h1m8 0h1m3 0h1m1 0h2m-49 1h1m1 0h5m1 0h1m2 0h1m3 0h1m2 0h1m2 0h4m4 0h2m2 0h4m1 0h2m1 0h2m1 0h1m1 0h1m1 0h1m-48 1h3m1 0h1m1 0h1m1 0h3m1 0h2m3 0h4m2 0h1m2 0h1m2 0h1m1 0h1m3 0h2m1 0h1m5 0h1m1 0h1m-48 1h3m1 0h4m1 0h2m1 0h2m1 0h1m2 0h1m1 0h1m2 0h2m2 0h1m1 0h1m1 0h1m1 0h1m1 0h2m2 0h2m1 0h1m1 0h1m1 0h1m1 0h1m-49 1h2m1 0h3m1 0h1m2 0h1m2 0h1m2 0h1m2 0h2m1 0h1m1 0h4m1 0h1m4 0h1m1 0h1m4 0h1m2 0h2m2 0h1m-49 1h2m4 0h1m2 0h3m1 0h3m2 0h3m1 0h3m1 0h1m1 0h1m2 0h4m1 0h5m1 0h5m1 0h1m-49 1h2m6 0h5m1 0h3m6 0h3m1 0h3m2 0h1m1 0h1m1 0h1m2 0h2m4 0h1m1 0h1m-48 1h4m2 0h1m3 0h1m6 0h2m1 0h5m3 0h1m1 0h4m3 0h4m1 0h4m2 0h1m-46 1h1m3 0h1m2 0h2m2 0h1m6 0h1m2 0h3m1 0h1m1 0h2m3 0h1m5 0h1m3 0h1m2 0h1m-49 1h1m4 0h2m1 0h1m2 0h1m2 0h1m4 0h2m2 0h1m3 0h1m3 0h1m2 0h1m1 0h1m2 0h2m1 0h1m1 0h1m1 0h1m1 0h1m-49 1h3m1 0h1m3 0h2m2 0h2m1 0h1m2 0h1m2 0h2m1 0h1m1 0h2m2 0h3m6 0h2m1 0h2m2 0h2m-47 1h1m3 0h3m4 0h1m2 0h1m2 0h1m4 0h3m1 0h1m3 0h4m1 0h3m1 0h1m1 0h3m3 0h1m-48 1h3m3 0h1m4 0h1m2 0h2m1 0h1m2 0h2m1 0h1m2 0h2m1 0h1m1 0h1m1 0h1m2 0h1m10 0h1m-49 1h3m3 0h1m1 0h2m1 0h1m3 0h1m4 0h1m1 0h5m4 0h1m3 0h2m2 0h8m1 0h1m-41 1h5m5 0h2m1 0h2m3 0h3m1 0h4m1 0h2m2 0h2m3 0h2m1 0h1m-48 1h7m3 0h1m1 0h3m1 0h3m1 0h3m1 0h1m1 0h1m2 0h1m4 0h2m2 0h1m1 0h1m1 0h1m1 0h2m2 0h1m-49 1h1m5 0h1m1 0h2m1 0h1m1 0h2m1 0h2m1 0h1m1 0h2m3 0h1m1 0h6m1 0h1m4 0h1m3 0h2m2 0h1m-49 1h1m1 0h3m1 0h1m1 0h2m1 0h1m1 0h2m2 0h1m1 0h1m1 0h6m4 0h1m2 0h1m1 0h1m1 0h7m1 0h3m-49 1h1m1 0h3m1 0h1m1 0h2m1 0h4m2 0h2m3 0h2m1 0h4m1 0h3m2 0h3m2 0h7m1 0h1m-49 1h1m1 0h3m1 0h1m1 0h4m4 0h2m1 0h1m4 0h1m1 0h1m1 0h2m1 0h3m2 0h2m1 0h1m5 0h2m-47 1h1m5 0h1m3 0h1m1 0h1m1 0h1m1 0h2m3 0h6m3 0h2m1 0h1m1 0h1m1 0h1m2 0h1m1 0h1m1 0h2m2 0h1m-49 1h7m1 0h1m5 0h3m1 0h4m2 0h1m2 0h1m1 0h2m5 0h1m1 0h2m1 0h1m3 0h4"/></svg></div>
+    <div>
+      <p class="olho"><svg class="i" aria-hidden="true"><use href="#heart"/></svg>Apoie o Cortaí</p>
+      <h2>Gratuito para quem usa. Não para quem mantém.</h2>
+      <p class="lead">O Cortaí não tem plano pago nem anúncios. Mantê-lo custa o <b>tempo de desenvolvimento</b>, a <b>hospedagem</b> deste site com o <b>registro do domínio</b>, renovado todo ano, e o <b>certificado digital</b> que vai tirar o aviso do Windows na instalação. Se a ferramenta foi útil para você, contribua com qualquer valor pelo Pix.</p>
+      <div class="chave">
+        <code>e36ed168-ca50-4694-af54-3b23826c6791</code>
+        <button class="btn ghost small" type="button" data-copia="e36ed168-ca50-4694-af54-3b23826c6791"><svg class="i" aria-hidden="true"><use href="#copy"/></svg>Copiar chave</button>
+        <button class="btn primary small" type="button" data-copia="00020126580014br.gov.bcb.pix0136e36ed168-ca50-4694-af54-3b23826c67915204000053039865802BR5906CORTAI6006BRASIL62070503***63040368"><svg class="i" aria-hidden="true"><use href="#copy"/></svg>Copiar Pix copia e cola</button>
+      </div>
+    </div>
+  </div></section>
 </main>
 
 <footer>
@@ -237,5 +268,12 @@ footer a:hover{color:var(--text)}
     <span><a href="https://github.com/kzen4/cortai">GitHub</a> · <a href="https://github.com/kzen4/cortai/issues/new/choose">Relatar um problema</a></span>
   </div>
 </footer>
+<div id="toast" role="status"></div>
+<script>
+// copiar Pix (mesmo comportamento do POLISMap): aviso na tela; sem área de transferência, mostra o texto para copiar à mão
+const toast = t => { const e = document.getElementById('toast'); e.textContent = t; e.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => e.classList.remove('show'), 2200); };
+document.querySelectorAll('[data-copia]').forEach(b => b.onclick = () => (navigator.clipboard?.writeText(b.dataset.copia) ?? Promise.reject())
+  .then(() => toast('Copiado! Cole no app do seu banco.'), () => prompt('Copie:', b.dataset.copia)));
+</script>
 </body>
 </html>
