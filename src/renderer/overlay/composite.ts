@@ -1,7 +1,7 @@
 // Quadro base do preview (vídeo recortado/encaixado). Espelha src/main/ffmpeg/graph.ts (export).
 import { ASPECT_SIZE } from '@shared/constants';
 import { reframeAt } from '@shared/reframe';
-import { cropRect } from '@shared/timeline';
+import { cropRect, webcamRect } from '@shared/timeline';
 import type { Clip } from '@shared/types';
 
 /** Desenha o quadro do vídeo no instante `rel` (s desde clip.in) no formato e layout do clipe. */
@@ -10,6 +10,16 @@ export function drawBase(ctx: CanvasRenderingContext2D, video: HTMLVideoElement,
   const vw = video.videoWidth, vh = video.videoHeight;
   if (!vw) return;
   const mode = clip.layout.mode;
+  if (mode === 'screen-face') { // em cima o vídeo inteiro, embaixo a janela da webcam (mesma conta do graph.ts)
+    const top = Math.round(H * (Math.round(ASPECT_SIZE[clip.layout.aspect][1] / 2) / ASPECT_SIZE[clip.layout.aspect][1]));
+    ctx.fillStyle = clip.layout.bgColor ?? '#0B0B0F';
+    ctx.fillRect(0, 0, W, top);
+    const s = Math.min(W / vw, top / vh);
+    ctx.drawImage(video, (W - vw * s) / 2, (top - vh * s) / 2, vw * s, vh * s);
+    const c = webcamRect(vw, vh, clip.layout.aspect, clip.layout.webcam);
+    ctx.drawImage(video, c.sx, c.sy, c.sw, c.sh, 0, top, W, H - top);
+    return;
+  }
   if (mode === 'blur-bg' || mode === 'color-bg') {
     const k = W / ASPECT_SIZE[clip.layout.aspect][0]; // blur é definido em pixels do export
     if (mode === 'blur-bg') {

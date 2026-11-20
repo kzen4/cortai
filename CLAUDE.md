@@ -90,10 +90,21 @@ prioridade sobre a do PATH. Modelos e perfis: `engine/models.json`; prompt da an
     Tentativa de fazer pelo Chrome em 2026-11-20: a extensão Claude in Chrome estava ativa, mas as ferramentas não
     carregaram nesta sessão nem após `/chrome` → reiniciar com `claude --chrome` e conferir antes de prometer.
   - Fora: assinatura de código (SmartScreen avisa; só quando houver tração), macOS/Linux (instalador só Windows por ora).
-- [ ] Fase 4 (V1) · Fase 5 (V2).
+- [~] **Fase 4 (V1)** — adiantados a pedido (2026-11-20):
+  - **Enquadramento por pedaço**: `EditItem.frame` {x,y} fixo (Esquerda/Centro/Direita no painel Layout, aplicado aos pedaços
+    selecionados ou ao do playhead; marca E/C/D na timeline); sem `frame`, segue os keyframes da cópia. `framingFor(clip, piece)`
+    é a fonte única (prévia, Resultados, export). Dividir mantém o enquadramento. "Ajustar enquadramento" num pedaço fixo arrasta
+    só o dele; "Seguir rosto" o devolve à cópia.
+  - **Tela + webcam** (`layout.mode = 'screen-face'`, `layout.webcam` {x,y,w}): em cima o vídeo inteiro encaixado, embaixo a janela
+    da webcam ampliada, legenda no meio (positionY 50). `webcamRect()` = mesma conta no canvas (`composite.ts`) e no ffmpeg
+    (`graph.ts`, `vstack`). Ajuste em "Ajustar janela da webcam" (arrastar/setas + tamanho). Detecção automática ao gerar os
+    cortes (`detectCornerWebcam`: rosto parado perto de um canto → já nasce em tela + webcam); heurística simples.
+  - Rótulos do filtergraph agora são únicos por pedaço (`layoutFilter(..., k)`): fundo desfocado com vários pedaços repetia rótulos.
+  - Testes: `graph.ffmpeg.test.ts` roda os 4 layouts com 3 pedaços no ffmpeg real (pula sem ffmpeg); E2E cobre E/C/D e tela + webcam.
+- [ ] Resto da Fase 4 (V1) · Fase 5 (V2).
 
 Fase 2 medida: corte de 3 min tocando a ~120 fps (tela 120 Hz), 0/270 quadros de vídeo perdidos; volume -14,7 LUFS
-(loudnorm em 2 passadas). Pendências: layouts "tela dividida" e "tela + rosto" (precisam de 2 rostos/diarização, V1);
+(loudnorm em 2 passadas). Pendências: layout "tela dividida" com 2 rostos (diarização, V1; "tela + webcam" já feito);
 emojis automáticos; zoom é um só por clipe (o crop do ffmpeg não muda de tamanho por quadro).
 
 Pendências conhecidas da Fase 1: macOS não testado (URLs prontas); Ollama no macOS abre a página de download;

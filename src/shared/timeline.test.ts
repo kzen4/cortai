@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clipPieces, copyPieces, cropRect, cutWords, duplicatePieces, editList, forCopy, inCopy, inCopyAt, insertAt, keptSegments, locateOut, mergeRanges, normalizeClip, outDuration, outToRel, outputWords, relToOut, removeFromPieces, restoreGap, restoreWords, setIn, splitPiece, subtractRange } from './timeline';
+import { clipPieces, copyPieces, detectCornerWebcam, FRAME_PRESETS, framingFor, presetOf, setPieceFrame, webcamRect, cropRect, cutWords, duplicatePieces, editList, forCopy, inCopy, inCopyAt, insertAt, keptSegments, locateOut, mergeRanges, normalizeClip, outDuration, outToRel, outputWords, relToOut, removeFromPieces, restoreGap, restoreWords, setIn, splitPiece, subtractRange } from './timeline';
 
 const clip = { in: 100, out: 130, order: undefined, splits: undefined, reframe: [], copies: undefined, cuts: [[105, 108], [107, 110], [125, 140]] as [number, number][], wordEdits: { 2: 'certo' } };
 
@@ -109,5 +109,34 @@ describe('lista de edição com cópias independentes', () => {
     expect(locateOut(l, 3)).toEqual({ idx: 1, rel: 3 });
     expect(locateOut(l, 5)).toEqual({ idx: 2, rel: 2 });
     expect(locateOut(l, 99).idx).toBe(4);
+  });
+});
+
+describe('enquadramento por pedaço e tela + webcam', () => {
+  const kf = (x: number) => [{ t: 0, x, y: 0.5, zoom: 1.4, ease: 'smooth' as const, auto: true }];
+  const c = normalizeClip({ in: 0, out: 30, cuts: [] as [number, number][], wordEdits: {}, reframe: kf(0.3) });
+  it('pedaço com enquadramento fixo usa o dele (com o zoom da cópia); sem, segue a cópia', () => {
+    const s = splitPiece(splitPiece(c, clipPieces(c)[0], 10), clipPieces(splitPiece(c, clipPieces(c)[0], 10))[1], 20);
+    const f = setPieceFrame(s, [0], FRAME_PRESETS.left);
+    const [p0, p1] = clipPieces(f);
+    expect(framingFor(f, p0).reframe).toEqual([{ t: 0, x: 0, y: 0.5, zoom: 1.4, ease: 'linear', auto: false }]);
+    expect(framingFor(f, p1).reframe[0].x).toBe(0.3);
+    expect(presetOf(p0.frame)).toBe('left');
+    expect(presetOf(p1.frame)).toBe('auto');
+  });
+  it('dividir um pedaço enquadrado mantém o enquadramento nas duas metades', () => {
+    const f = setPieceFrame(c, [0], FRAME_PRESETS.right);
+    expect(clipPieces(splitPiece(f, clipPieces(f)[0], 12)).map((p) => p.frame)).toEqual([FRAME_PRESETS.right, FRAME_PRESETS.right]);
+  });
+  it('janela da webcam: proporção da metade de baixo e dentro do quadro', () => {
+    const r = webcamRect(1920, 1080, '9:16', { x: 0.95, y: 0.95, w: 0.28 });
+    expect(r.sw / r.sh).toBeCloseTo(1080 / 960);
+    expect(r.sx + r.sw).toBeCloseTo(1920);
+    expect(r.sy + r.sh).toBeCloseTo(1080);
+  });
+  it('detecta webcam no canto só com rosto parado perto de um canto', () => {
+    expect(detectCornerWebcam([{ x: 0.86, y: 0.8 }, { x: 0.87, y: 0.81 }])).toEqual({ x: 0.87, y: 0.81 });
+    expect(detectCornerWebcam([{ x: 0.5, y: 0.5 }])).toBeNull();
+    expect(detectCornerWebcam([{ x: 0.2, y: 0.8 }, { x: 0.6, y: 0.5 }])).toBeNull();
   });
 });

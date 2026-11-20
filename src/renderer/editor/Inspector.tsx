@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { FileText, Hash, LayoutTemplate, ListOrdered, LogIn, LogOut, Sparkles, Tag, Type, Wand2 } from 'lucide-react';
 import { CAPTION_FONTS, CAPTION_TEMPLATES, TEMPLATE_NAMES } from '@shared/templates';
-import { editList, forCopy, inCopy, outDuration, setIn, setOut } from '@shared/timeline';
+import { DEFAULT_WEBCAM, detectCornerWebcam, editList, forCopy, FRAME_PRESETS, inCopy, outDuration, presetOf, setIn, setOut, setPieceFrame, type FramePreset } from '@shared/timeline';
 import type { AspectRatio, CaptionStyle, Clip, LayoutSettings } from '@shared/types';
 import { Field, Segmented, fmtClock, inputCls, selectCls, textareaCls } from '../components/ui';
 
@@ -9,11 +9,23 @@ export type Tab = 'caption' | 'layout' | 'clip';
 type Update = (fn: (c: Clip) => Clip, merge?: string) => void;
 const ANIMS: CaptionStyle['animation'][] = ['none', 'pop', 'bounce', 'fade', 'typewriter', 'highlight'];
 
-export function Inspector({ clip, tab, onTab, update, copy }: { clip: Clip; tab: Tab; onTab: (t: Tab) => void; update: Update; copy: number }) {
+/** targets = pedaços (índices em clip.order) que o "Enquadramento do pedaço" altera: os selecionados na timeline ou o do playhead. */
+export function Inspector({ clip, tab, onTab, update, copy, targets, targetsLabel }: {
+  clip: Clip; tab: Tab; onTab: (t: Tab) => void; update: Update; copy: number; targets: number[]; targetsLabel: string;
+}) {
   const { t } = useTranslation();
   const cap = (patch: Partial<CaptionStyle>, merge?: string) => update((c) => ({ ...c, caption: { ...c.caption, ...patch } }), merge);
   const lay = (patch: Partial<LayoutSettings>, merge?: string) => update((c) => ({ ...c, layout: { ...c.layout, ...patch } }), merge);
   const s = clip.caption;
+  // modo de layout: tela + webcam já entra com a janela no rosto (se estiver num canto) e a legenda no meio
+  const setMode = (mode: LayoutSettings['mode']) => update((c) => mode !== 'screen-face' ? { ...c, layout: { ...c.layout, mode } } : {
+    ...c, caption: { ...c.caption, positionY: 50 },
+    layout: { ...c.layout, mode, webcam: c.layout.webcam ?? { ...DEFAULT_WEBCAM, ...(detectCornerWebcam(c.reframe) ?? {}) } },
+  });
+  const frames = targets.map((k) => presetOf(clip.order?.[k]?.frame));
+  const frameValue = frames.length && frames.every((f) => f === frames[0]) ? frames[0] : ('' as const);
+  const setFrame = (v: FramePreset | 'auto' | 'custom' | '') =>
+    update((c) => setPieceFrame(c, targets, v === 'auto' ? undefined : FRAME_PRESETS[v as FramePreset]));
 
   return (
     <aside className="flex min-h-0 flex-col border-l border-border">
@@ -75,8 +87,22 @@ export function Inspector({ clip, tab, onTab, update, copy }: { clip: Clip; tab:
           <>
             <Segmented<AspectRatio> label={t('editor.format')} value={clip.layout.aspect} onChange={(v) => lay({ aspect: v })}
               options={(['9:16', '1:1', '4:5', '16:9'] as const).map((v) => ({ value: v, label: v }))} />
-            <Segmented<LayoutSettings['mode']> label={t('editor.mode')} value={clip.layout.mode} onChange={(v) => lay({ mode: v })}
-              options={(['single', 'blur-bg', 'color-bg'] as const).map((v) => ({ value: v, label: t(`editor.modes.${v}`) }))} />
+            <Segmented<LayoutSettings['mode']> label={t('editor.mode')} value={clip.layout.mode} onChange={setMode}
+              options={(['single', 'screen-face', 'blur-bg', 'color-bg'] as const).map((v) => ({ value: v, label: t(`editor.modes.${v}`) }))} />
+            {clip.layout.mode === 'single' && targets.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <Segmented<FramePreset | 'auto' | 'custom' | ''> label={t('editor.pieceFrame')} value={frameValue} onChange={setFrame}
+                  options={(['auto', 'left', 'center', 'right'] as const).map((v) => ({ value: v, label: t(`editor.frames.${v}`) }))} />
+                <p className="text-[11px] text-muted">{targetsLabel}{frameValue === 'custom' ? ` · ${t('editor.frames.custom')}` : ''}</p>
+              </div>
+            )}
+            {clip.layout.mode === 'screen-face' && (
+              <>
+                <Range label={t('editor.webcamSize')} value={Math.round((clip.layout.webcam?.w ?? DEFAULT_WEBCAM.w) * 100)} min={10} max={60} suffix="%"
+                  onChange={(v) => lay({ webcam: { ...(clip.layout.webcam ?? DEFAULT_WEBCAM), w: v / 100 } }, 'webcam')} />
+                <p className="text-[11px] text-muted">{t('editor.webcamHint')}</p>
+              </>
+            )}
             {clip.layout.mode === 'single' && (
               <Range label={t('editor.zoom')} value={Math.round((forCopy(clip, copy).reframe[0]?.zoom ?? 1) * 100)} min={100} max={250} suffix="%"
                 onChange={(v) => update((c) => inCopy(c, copy, (x) => ({ ...x, reframe: (x.reframe.length ? x.reframe : [{ t: 0, x: 0.5, y: 0.5, zoom: 1, ease: 'smooth' as const, auto: false }]).map((k) => ({ ...k, zoom: v / 100 })) })), 'zoom')} />

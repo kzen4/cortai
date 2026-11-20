@@ -302,7 +302,8 @@
     "modes": {
       "single": "Seguir rosto",
       "blur-bg": "Fundo desfocado",
-      "color-bg": "Fundo de cor"
+      "color-bg": "Fundo de cor",
+      "screen-face": "Tela + webcam"
     },
     "zoom": "Zoom",
     "blurAmt": "Desfoque",
@@ -371,7 +372,31 @@
     "captionEdit": "Texto da legenda (Enter salva, Esc cancela)",
     "captionEditHint": "Arraste a legenda para mover · duplo clique para editar o texto",
     "copyN": "Cópia {{n}}",
-    "copyHint": "Editando esta cópia: cortes, correções e enquadramento valem só para ela"
+    "copyHint": "Editando esta cópia: cortes, correções e enquadramento valem só para ela",
+    "pieceFrame": "Enquadramento do pedaço",
+    "frames": {
+      "auto": "Seguir rosto",
+      "left": "Esquerda",
+      "center": "Centro",
+      "right": "Direita",
+      "custom": "personalizado",
+      "short": {
+        "left": "E",
+        "center": "C",
+        "right": "D",
+        "custom": "P",
+        "auto": ""
+      }
+    },
+    "frameTargetCur": "Aplica no pedaço {{n}} (onde está o playhead). Selecione vários na timeline para mudar todos.",
+    "frameTargetsSel_one": "Aplica no pedaço selecionado.",
+    "frameTargetsSel_other": "Aplica nos {{count}} pedaços selecionados.",
+    "webcamSize": "Tamanho da janela da webcam",
+    "webcamHint": "Em cima vai o vídeo inteiro; embaixo, a webcam ampliada; a legenda fica no meio. Para mudar a posição da janela, use \"Ajustar janela da webcam\" abaixo da prévia.",
+    "webcamAdjust": "Ajustar janela da webcam",
+    "webcamWindow": "Janela da webcam: arraste ou use as setas",
+    "webcamDetect": "Achar o rosto",
+    "webcamViewHint": "Arraste a moldura até a webcam. O que estiver dentro dela aparece embaixo, ampliado."
   },
   "errors": {
     "screen": "Ops, essa tela travou.",

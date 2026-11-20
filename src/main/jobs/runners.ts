@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { toSrt } from '@shared/clipWords';
-import { editList, outDuration, outputWords } from '@shared/timeline';
+import { DEFAULT_WEBCAM, detectCornerWebcam, editList, outDuration, outputWords } from '@shared/timeline';
 import { CAPTION_TEMPLATES, DEFAULT_TEMPLATE } from '@shared/templates';
 import type { Clip, Job, ReframeKeyframe } from '@shared/types';
 import { getSettings } from '../db';
@@ -110,11 +110,14 @@ export async function finalize(job: Job) {
   const list = candidates(p.id);
   for (const c of list) {
     if (existsSync(clipPath(p.id, c.id))) continue; // edições do usuário nunca são sobrescritas
+    // pessoa numa webcam no canto (rosto parado perto de um canto) → tela + webcam, com a legenda no meio
+    const cam = detectCornerWebcam(kfs[c.id] ?? []);
     saveClip({
       id: c.id, projectId: p.id, title: c.title, description: c.description, hashtags: c.hashtags, score: c.score,
       scores: c.scores, reason: c.reason, favorite: false, in: c.in, out: c.out, cuts: [], wordEdits: {},
-      layout: { aspect: p.generation.aspect, mode: 'single', smoothing: 0.5 }, reframe: kfs[c.id] ?? [],
-      caption: { ...tpl, keywords: c.keywords }, tracks: [], audio: { speechGain: 1, normalizeLufs: -14, denoise: false },
+      layout: { aspect: p.generation.aspect, mode: cam ? 'screen-face' : 'single', smoothing: 0.5, ...(cam ? { webcam: { ...DEFAULT_WEBCAM, ...cam } } : {}) },
+      reframe: kfs[c.id] ?? [],
+      caption: { ...tpl, keywords: c.keywords, ...(cam ? { positionY: 50 } : {}) }, tracks: [], audio: { speechGain: 1, normalizeLufs: -14, denoise: false },
     });
   }
   p.clipIds = list.map((c) => c.id);

@@ -302,7 +302,8 @@
     "modes": {
       "single": "Follow face",
       "blur-bg": "Blurred background",
-      "color-bg": "Color background"
+      "color-bg": "Color background",
+      "screen-face": "Screen + webcam"
     },
     "zoom": "Zoom",
     "blurAmt": "Blur",
@@ -371,7 +372,31 @@
     "captionEdit": "Caption text (Enter saves, Esc cancels)",
     "captionEditHint": "Drag the caption to move it · double-click to edit the text",
     "copyN": "Copy {{n}}",
-    "copyHint": "Editing this copy: cuts, corrections and framing apply only to it"
+    "copyHint": "Editing this copy: cuts, corrections and framing apply only to it",
+    "pieceFrame": "Piece framing",
+    "frames": {
+      "auto": "Follow face",
+      "left": "Left",
+      "center": "Center",
+      "right": "Right",
+      "custom": "custom",
+      "short": {
+        "left": "L",
+        "center": "C",
+        "right": "R",
+        "custom": "X",
+        "auto": ""
+      }
+    },
+    "frameTargetCur": "Applies to piece {{n}} (under the playhead). Select several in the timeline to change them all.",
+    "frameTargetsSel_one": "Applies to the selected piece.",
+    "frameTargetsSel_other": "Applies to the {{count}} selected pieces.",
+    "webcamSize": "Webcam window size",
+    "webcamHint": "The whole video goes on top, the enlarged webcam below and the caption in the middle. To move the window, use \"Adjust webcam window\" below the preview.",
+    "webcamAdjust": "Adjust webcam window",
+    "webcamWindow": "Webcam window: drag or use the arrow keys",
+    "webcamDetect": "Find the face",
+    "webcamViewHint": "Drag the frame onto the webcam. Whatever is inside it shows up below, enlarged."
   },
   "errors": {
     "screen": "Oops, this screen crashed.",

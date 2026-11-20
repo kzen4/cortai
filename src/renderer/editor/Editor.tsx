@@ -68,6 +68,8 @@ function EditorLoaded({ clip: initial, words, proxy, src, peaks, projectId, go }
   const list = useMemo(() => pieces.map((p): Seg => [p.a, p.b]), [pieces]);
   // cópia sob o playhead: transcrição, legenda na prévia e enquadramento editam só ela
   const [copy, setCopy] = useState(0);
+  const [curEntry, setCurEntry] = useState(-1); // pedaço sob o playhead (índice em clip.order)
+  const [selEntries, setSelEntries] = useState<number[]>([]); // pedaços selecionados na timeline
   const copyNames = useMemo(() => { const m = new Map<number, number>(); pieces.forEach((p) => { if (p.g && !m.has(p.g)) m.set(p.g, m.size + 1); }); return m; }, [pieces]);
   const listRef = useRef<Seg[]>(list);
   listRef.current = list;
@@ -81,8 +83,8 @@ function EditorLoaded({ clip: initial, words, proxy, src, peaks, projectId, go }
     if (!inside(l[idx.current], rel)) idx.current = l.findIndex((sg) => inside(sg, rel));
     const sg = l[idx.current];
     const out = sg ? outStart(l, idx.current) + Math.min(sg[1], Math.max(sg[0], rel)) - sg[0] : null;
-    const g = piecesRef.current[idx.current]?.g;
-    if (g !== undefined) setCopy((x) => (x === g ? x : g));
+    const pc = piecesRef.current[idx.current];
+    if (pc) { setCopy((x) => (x === pc.g ? x : pc.g)); setCurEntry((x) => (x === pc.entry ? x : pc.entry)); }
     if (force || out !== outNow.current || !v.paused) { outNow.current = out; listeners.current.forEach((fn) => fn(rel, out, idx.current)); }
   }, []);
   useEffect(() => {
@@ -216,10 +218,12 @@ function EditorLoaded({ clip: initial, words, proxy, src, peaks, projectId, go }
         <TranscriptPanel clip={clip} words={nearby} player={player} selection={selection} onSelect={setSelection} update={h.update} copy={copy} copyName={copyNames.get(copy) ?? 0} />
         <Preview clip={clip} words={words} src={src} player={player} copy={copy} pieces={pieces} playing={playing} safe={safe} onSafe={() => setSafe((s) => !s)}
           update={h.update} onCaptionClick={() => setTab('caption')} projectId={projectId} duration={dur} />
-        <Inspector clip={clip} tab={tab} onTab={setTab} update={h.update} copy={copy} />
+        <Inspector clip={clip} tab={tab} onTab={setTab} update={h.update} copy={copy}
+          targets={selEntries.length ? selEntries : curEntry >= 0 ? [curEntry] : []}
+          targetsLabel={selEntries.length ? t('editor.frameTargetsSel', { count: selEntries.length }) : t('editor.frameTargetCur', { n: curEntry + 1 })} />
       </div>
 
-      <Timeline clip={clip} words={words} peaks={peaks} player={player} update={h.update} wordSelected={!!selection} onPick={() => setSelection(null)} />
+      <Timeline clip={clip} words={words} peaks={peaks} player={player} update={h.update} wordSelected={!!selection} onPick={() => setSelection(null)} onSelection={setSelEntries} />
 
       <Modal open={help} onClose={() => setHelp(false)} labelledBy="sc-title" className="w-[520px]">
         <div className="max-h-[80vh] overflow-y-auto p-6">

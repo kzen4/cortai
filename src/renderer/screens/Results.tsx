@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, CheckSquare, Copy, Download, FileText, Hash, Pencil, Star, Trash2, Type, X } from 'lucide-react';
 import { chunkWords } from '@shared/captions';
 import { clipWords } from '@shared/clipWords';
-import { clipPieces, forCopy, outDuration, outStart, outputWords, type Seg } from '@shared/timeline';
+import { clipPieces, framingFor, outDuration, outStart, outputWords, type Seg } from '@shared/timeline';
 import { drawBase } from '../overlay/composite';
 import type { Clip, Project, Word } from '@shared/types';
 import { ASPECT_SIZE } from '@shared/constants';
@@ -107,7 +107,7 @@ function ClipCard({ clip, proxy, project, words, selecting, selected, active, on
     const rel = v.currentTime - clip.in;
     if (!inSeg(idx.current, rel)) idx.current = segs.findIndex((_, i) => inSeg(i, rel));
     const i = idx.current;
-    drawBase(b.getContext('2d')!, v, forCopy(clip, pieces[i]?.g ?? 0), rel); // enquadramento da cópia do pedaço
+    drawBase(b.getContext('2d')!, v, framingFor(clip, pieces[i] ?? { g: 0 }), rel); // enquadramento do pedaço
     drawOverlay(c.getContext('2d')!, input, i >= 0 ? outStart(segs, i) + rel - segs[i][0] : -1);
   }, [clip, input, segs]); // eslint-disable-line react-hooks/exhaustive-deps
 

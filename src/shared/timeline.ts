@@ -2,7 +2,7 @@
 // Convenções: clip.in/out e clip.cuts em segundos do vídeo ORIGINAL; "rel" = segundos desde clip.in;
 // "out" = segundos no vídeo exportado (sem os trechos cortados). Keyframes de enquadramento usam "rel".
 import { ASPECT_SIZE } from './constants';
-import type { AspectRatio, Clip, CopyEdits, EditItem, ReframeKeyframe, Word } from './types';
+import type { AspectRatio, Clip, CopyEdits, EditItem, LayoutSettings, PieceFrame, ReframeKeyframe, Word } from './types';
 
 export type Seg = [number, number];
 
@@ -102,7 +102,7 @@ export function subtractRange(cuts: Seg[], [a, b]: Seg): Seg[] {
 type EditClip = Pick<Clip, 'in' | 'out' | 'cuts' | 'order' | 'splits'>;
 type CopyClip = Pick<Clip, 'wordEdits' | 'reframe' | 'copies'>;
 type OrderClip = EditClip & CopyClip;
-export interface Piece { a: number; b: number; entry: number; g: number; muted: boolean } // a, b em rel; entry = índice no order
+export interface Piece { a: number; b: number; entry: number; g: number; muted: boolean; frame?: PieceFrame } // a, b em rel; entry = índice no order
 
 /** Itens da lista (segundos do original). */
 export function orderItems(clip: EditClip): EditItem[] {
@@ -115,7 +115,7 @@ export function orderItems(clip: EditClip): EditItem[] {
 
 /** Pedaços do vídeo final, na ordem. */
 export const clipPieces = (clip: EditClip): Piece[] =>
-  orderItems(clip).map((it, entry) => ({ a: it.a - clip.in, b: it.b - clip.in, entry, g: it.g ?? 0, muted: !!it.muted }));
+  orderItems(clip).map((it, entry) => ({ a: it.a - clip.in, b: it.b - clip.in, entry, g: it.g ?? 0, muted: !!it.muted, frame: it.frame }));
 
 /** Lista de edição (rel): o que toca, na ordem. É a base do preview, das legendas e do export. */
 export const editList = (clip: EditClip): Seg[] => clipPieces(clip).map((p): Seg => [p.a, p.b]);
@@ -192,7 +192,7 @@ export function removeFromPieces<C extends OrderClip>(c: C, parts: { entry: numb
 export interface Clipboard { items: EditItem[]; data: Record<number, CopyEdits> }
 export function copyPieces(c: OrderClip, ps: Piece[]): Clipboard {
   return {
-    items: ps.map((p) => ({ a: c.in + p.a, b: c.in + p.b, g: p.g, ...(p.muted ? { muted: true } : {}) })),
+    items: ps.map((p) => ({ a: c.in + p.a, b: c.in + p.b, g: p.g, ...(p.muted ? { muted: true } : {}), ...(p.frame ? { frame: p.frame } : {}) })),
     data: Object.fromEntries([...new Set(ps.map((p) => p.g))].map((g) => [g, copyData(c, g)])),
   };
 }
@@ -263,4 +263,48 @@ export function setOut<C extends OrderClip>(c: C, v: number): C {
   const o = c.order.map((x) => ({ ...x }));
   o[o.length - 1].b = Math.max(v, o[o.length - 1].a + 0.5);
   return withOrder(c, o);
+}
+
+// ---- Enquadramento por pedaço ------------------------------------------------------------------------
+/** Posições prontas do enquadramento de um pedaço (x do centro da janela; y no meio). */
+export const FRAME_PRESETS = { left: { x: 0, y: 0.5 }, center: { x: 0.5, y: 0.5 }, right: { x: 1, y: 0.5 } } as const;
+export type FramePreset = keyof typeof FRAME_PRESETS;
+export const presetOf = (f?: PieceFrame): FramePreset | 'auto' | 'custom' =>
+  !f ? 'auto' : (Object.entries(FRAME_PRESETS).find(([, v]) => v.x === f.x && v.y === f.y)?.[0] as FramePreset) ?? 'custom';
+
+/** O corte visto por um pedaço: enquadramento da cópia dele ou, se o pedaço tiver um fixo, esse (com o zoom da cópia). */
+export function framingFor<C extends CopyClip>(clip: C, p: { g: number; frame?: PieceFrame }): C {
+  const v = forCopy(clip, p.g);
+  if (!p.frame) return v;
+  const zoom = v.reframe[0]?.zoom ?? 1;
+  return { ...v, reframe: [{ t: 0, x: p.frame.x, y: p.frame.y, zoom, ease: 'linear', auto: false }] };
+}
+
+/** Fixa (ou volta para "seguir rosto", com undefined) o enquadramento dos pedaços indicados. */
+export const setPieceFrame = <C extends OrderClip>(c: C, entries: number[], frame: PieceFrame | undefined): C =>
+  ({ ...c, order: c.order?.map((it, k) => (entries.includes(k) ? { ...it, frame } : it)) });
+
+// ---- Tela + webcam --------------------------------------------------------------------------------------
+// Formato final dividido ao meio: em cima o vídeo inteiro (encaixado), embaixo a janela da webcam ampliada.
+export const DEFAULT_WEBCAM = { x: 0.85, y: 0.8, w: 0.28 };
+
+/** Janela da webcam no original, com a proporção da metade de baixo do formato final (mesma conta no preview e no ffmpeg). */
+export function webcamRect(srcW: number, srcH: number, aspect: AspectRatio, cam: LayoutSettings['webcam'] = DEFAULT_WEBCAM) {
+  const [W, H] = ASPECT_SIZE[aspect];
+  const r = W / (H - Math.round(H / 2)); // largura/altura da metade de baixo
+  let sw = Math.min(srcW, Math.max(0.05, cam.w) * srcW), sh = sw / r;
+  if (sh > srcH) { sh = srcH; sw = sh * r; }
+  const clamp = (v: number, max: number) => Math.min(Math.max(0, v), max);
+  return { sx: clamp(cam.x * srcW - sw / 2, srcW - sw), sy: clamp(cam.y * srcH - sh / 2, srcH - sh), sw, sh };
+}
+
+/** Pessoa numa webcam no canto? Rosto parado (pouca variação) e perto de um canto do quadro → centro da webcam. */
+export function detectCornerWebcam(kfs: Pick<ReframeKeyframe, 'x' | 'y'>[]): { x: number; y: number } | null {
+  if (kfs.length < 1) return null;
+  const med = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)];
+  const xs = kfs.map((k) => k.x), ys = kfs.map((k) => k.y);
+  const x = med(xs), y = med(ys);
+  const spread = Math.max(...xs) - Math.min(...xs) + Math.max(...ys) - Math.min(...ys);
+  // ponytail: heurística simples (canto + parado); se errar, o usuário troca o modo no painel Layout
+  return (x < 0.3 || x > 0.7) && (y < 0.35 || y > 0.65) && spread < 0.15 ? { x, y } : null;
 }

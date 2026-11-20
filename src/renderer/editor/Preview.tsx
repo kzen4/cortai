@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Crosshair, Focus, Grid2x2, LocateFixed, Pause, Pencil, Pin, Play, SkipBack, StepBack, StepForward } from 'lucide-react';
+import { Crosshair, Focus, Grid2x2, LocateFixed, Pause, Pencil, Pin, Play, ScanFace, SkipBack, StepBack, StepForward, Webcam } from 'lucide-react';
 import { chunkWords } from '@shared/captions';
 import { ASPECT_SIZE } from '@shared/constants';
 import { reframeAt } from '@shared/reframe';
-import { cropRect, forCopy, inCopy, outputWords, type Piece } from '@shared/timeline';
+import { cropRect, DEFAULT_WEBCAM, detectCornerWebcam, forCopy, framingFor, inCopy, outputWords, setPieceFrame, webcamRect, type Piece } from '@shared/timeline';
 import type { Clip, ReframeKeyframe, Word } from '@shared/types';
 import { Button, IconButton, fmtClock } from '../components/ui';
 import { drawBase } from '../overlay/composite';
@@ -31,10 +31,13 @@ export function Preview({ clip, words, src, player, copy, pieces, playing, safe,
 }) {
   const { t } = useTranslation();
   const [framing, setFraming] = useState(false);
+  const curIdx = useRef(-1); // pedaço sob o playhead
+  const [framingPiece, setFramingPiece] = useState<Piece | undefined>(); // pedaço sendo enquadrado
   const canvas = useRef<HTMLCanvasElement>(null);
   const overlay = useRef<HTMLCanvasElement>(null);
   const time = useRef<HTMLSpanElement>(null);
   const [W, H] = ASPECT_SIZE[clip.layout.aspect];
+  useEffect(() => { if (framingPiece) setFramingPiece(pieces.find((p) => p.entry === framingPiece.entry)); }, [pieces]); // eslint-disable-line react-hooks/exhaustive-deps
   const area = useRef<HTMLElement>(null);
   const avail = useSize(area);
   // maior tamanho que cabe mantendo a proporção do formato
@@ -53,7 +56,8 @@ export function Preview({ clip, words, src, player, copy, pieces, playing, safe,
     c.height = o.height = Math.round(ph * dpr);
     const cb = c.getContext('2d')!, co = o.getContext('2d')!;
     const draw = (rel: number, out: number | null, idx: number) => {
-      drawBase(cb, v, forCopy(clip, pieces[idx]?.g ?? 0), rel); // cada pedaço com o enquadramento da sua cópia
+      curIdx.current = idx;
+      drawBase(cb, v, framingFor(clip, pieces[idx] ?? { g: 0 }), rel); // cada pedaço com o enquadramento dele (fixo) ou da sua cópia
       drawOverlay(co, input, out ?? -1);
       if (time.current) time.current.textContent = `${fmtClock(out ?? 0)} / ${fmtClock(duration)}`;
     };
@@ -106,7 +110,17 @@ export function Preview({ clip, words, src, player, copy, pieces, playing, safe,
   return (
     <section ref={area} aria-label={t('editor.previewLabel')} className="flex min-h-0 min-w-0 flex-col items-center justify-center gap-3 overflow-hidden bg-bg p-3">
       {framing ? (
-        <FramingView clip={forCopy(clip, copy)} src={src} player={player} update={(fn, m) => update((c) => inCopy(c, copy, fn), m)} projectId={projectId} onDone={() => setFraming(false)} maxW={avail.w - 32} maxH={avail.h - CONTROLS - 24} />
+        clip.layout.mode === 'screen-face'
+          ? <WebcamView clip={clip} src={src} player={player} update={update} onDone={() => setFraming(false)} maxW={avail.w - 32} maxH={avail.h - CONTROLS - 24} />
+          : framingPiece?.frame
+            ? <FramingView clip={framingFor(clip, framingPiece)} src={src} player={player} projectId={projectId} onDone={() => setFraming(false)} maxW={avail.w - 32} maxH={avail.h - CONTROLS - 24}
+                update={(fn, m) => update((c) => { // pedaço com enquadramento fixo: o arrasto muda só o dele; "seguir rosto" o devolve à cópia
+                  const r = fn(framingFor(c, framingPiece)).reframe;
+                  if (r.some((k) => k.auto)) return setPieceFrame(c, [framingPiece.entry], undefined);
+                  const { x, y } = reframeAt(r, player.relNow());
+                  return setPieceFrame(c, [framingPiece.entry], { x, y });
+                }, m)} />
+            : <FramingView clip={forCopy(clip, copy)} src={src} player={player} update={(fn, m) => update((c) => inCopy(c, copy, fn), m)} projectId={projectId} onDone={() => setFraming(false)} maxW={avail.w - 32} maxH={avail.h - CONTROLS - 24} />
       ) : (
         <div className="relative shrink-0 overflow-hidden rounded-panel border border-border bg-black" style={{ width: pw, height: ph }}>
           <canvas ref={canvas} className="absolute inset-0 size-full" />
@@ -134,7 +148,8 @@ export function Preview({ clip, words, src, player, copy, pieces, playing, safe,
         <IconButton icon={StepForward} label={t('editor.nextFrame')} onClick={() => { const o = player.outNow(); if (o === null) player.seekRel(player.relNow() + 1 / 30); else player.seekOut(o + 1 / 30); }} />
         <span ref={time} className="ml-2 w-28 font-mono text-[12px] text-muted" />
         <IconButton icon={Grid2x2} label={t('editor.safe')} active={safe} onClick={onSafe} />
-        {clip.layout.mode === 'single' && !framing && <Button icon={Crosshair} className="ml-2 h-9" onClick={() => setFraming(true)}>{t('editor.framing')}</Button>}
+        {clip.layout.mode === 'single' && !framing && <Button icon={Crosshair} className="ml-2 h-9" onClick={() => { setFramingPiece(pieces[curIdx.current]); setFraming(true); }}>{t('editor.framing')}</Button>}
+        {clip.layout.mode === 'screen-face' && !framing && <Button icon={Webcam} className="ml-2 h-9" onClick={() => setFraming(true)}>{t('editor.webcamAdjust')}</Button>}
       </div>
     </section>
   );
@@ -217,6 +232,63 @@ function FramingView({ clip, src, player, update, projectId, onDone, maxW, maxH 
         <Button icon={Focus} className="h-9" onClick={async () => { const auto = await window.cortai.clips.autoReframe(projectId, clip.id); update((c) => ({ ...c, reframe: auto.map((k) => ({ ...k, zoom })) })); }}>{t('editor.follow')}</Button>
         <Button icon={Pin} className="h-9" onClick={() => { const { x, y } = reframeAt(clip.reframe, player.relNow()); single(x, y); }}>{t('editor.pin')}</Button>
         <Button icon={LocateFixed} className="h-9" onClick={() => single(0.5, 0.5)}>{t('editor.center')}</Button>
+        <Button variant="primary" className="h-9" onClick={onDone}>{t('editor.framingDone')}</Button>
+      </div>
+    </div>
+  );
+}
+
+/** Original inteiro com a moldura da webcam por cima (layout tela + webcam): arrastar ou setas movem a janela. */
+function WebcamView({ clip, src, player, update, onDone, maxW, maxH }: { clip: Clip; src: { width: number; height: number }; player: Player; update: Update; onDone: () => void; maxW: number; maxH: number }) {
+  const { t } = useTranslation();
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const BW = Math.max(200, Math.floor(Math.min(maxW, ((maxH - 150) * src.width) / src.height))), BH = Math.round((BW * src.height) / src.width);
+  const cam = clip.layout.webcam ?? DEFAULT_WEBCAM;
+  const r = webcamRect(src.width, src.height, clip.layout.aspect, cam);
+  const set = (patch: Partial<typeof cam>) => update((c) => ({ ...c, layout: { ...c.layout, webcam: { ...(c.layout.webcam ?? DEFAULT_WEBCAM), ...patch } } }), 'webcam');
+
+  useEffect(() => {
+    const c = canvas.current!, v = player.video.current!;
+    c.width = BW; c.height = BH;
+    const ctx = c.getContext('2d')!;
+    const draw = () => { if (v.videoWidth) ctx.drawImage(v, 0, 0, BW, BH); };
+    draw();
+    return player.subscribe(draw);
+  }, [player, BW, BH]);
+
+  const onDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const box = canvas.current!.getBoundingClientRect();
+    const el = e.currentTarget;
+    el.setPointerCapture(e.pointerId);
+    const move = (ev: PointerEvent) => set({ x: Math.min(1, Math.max(0, (ev.clientX - box.left) / box.width)), y: Math.min(1, Math.max(0, (ev.clientY - box.top) / box.height)) });
+    const up = () => { el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); };
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+  };
+  const onKey = (e: React.KeyboardEvent) => {
+    const d = { ArrowLeft: [-0.01, 0], ArrowRight: [0.01, 0], ArrowUp: [0, -0.01], ArrowDown: [0, 0.01] }[e.key];
+    if (!d) return;
+    e.preventDefault(); e.stopPropagation();
+    set({ x: Math.min(1, Math.max(0, cam.x + d[0])), y: Math.min(1, Math.max(0, cam.y + d[1])) });
+  };
+  const face = detectCornerWebcam(clip.reframe) ?? (clip.reframe[0] ? { x: clip.reframe[0].x, y: clip.reframe[0].y } : null);
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="relative shrink-0 overflow-hidden rounded-panel border border-border bg-black" style={{ width: BW, height: BH }}>
+        <canvas ref={canvas} className="absolute inset-0 size-full opacity-70" />
+        <div role="slider" tabIndex={0} aria-label={t('editor.webcamWindow')} aria-valuetext={`${Math.round(cam.x * 100)}%, ${Math.round(cam.y * 100)}%`}
+          onPointerDown={onDown} onKeyDown={onKey}
+          className="absolute cursor-move rounded-input border-2 border-primary shadow-[0_0_0_9999px_rgba(11,11,15,0.55)] focus-visible:outline-2 focus-visible:outline-primary"
+          style={{ left: (r.sx / src.width) * BW, top: (r.sy / src.height) * BH, width: (r.sw / src.width) * BW, height: (r.sh / src.height) * BH }} />
+      </div>
+      <p className="max-w-[460px] text-center text-[12px] text-muted">{t('editor.webcamViewHint')}</p>
+      <label className="flex w-[280px] flex-col gap-1.5">
+        <span className="flex justify-between text-[12px] font-medium text-muted">{t('editor.webcamSize')}<span className="font-mono text-text">{Math.round(cam.w * 100)}%</span></span>
+        <input type="range" min={10} max={60} value={Math.round(cam.w * 100)} onChange={(e) => set({ w: Number(e.target.value) / 100 })} className="accent-[var(--primary)]" />
+      </label>
+      <div className="flex flex-wrap justify-center gap-2">
+        {face && <Button icon={ScanFace} className="h-9" onClick={() => set(face)}>{t('editor.webcamDetect')}</Button>}
         <Button variant="primary" className="h-9" onClick={onDone}>{t('editor.framingDone')}</Button>
       </div>
     </div>

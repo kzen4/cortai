@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeftToLine, ArrowRightToLine, BookmarkMinus, BookmarkPlus, Copy, FoldHorizontal, Magnet, Scissors, SquareDashedMousePointer, Trash2, Volume2, VolumeX, ZoomIn, ZoomOut } from 'lucide-react';
 import { chunkWords } from '@shared/captions';
-import { clipPieces, copyPieces, duplicatePieces, forCopy, insertAt, locateOut, outputWords, removeFromPieces, restoreGap, setIn, setOut, splitPiece, type Clipboard, type Piece, type Seg } from '@shared/timeline';
+import { clipPieces, copyPieces, duplicatePieces, framingFor, insertAt, presetOf, locateOut, outputWords, removeFromPieces, restoreGap, setIn, setOut, splitPiece, type Clipboard, type Piece, type Seg } from '@shared/timeline';
 import type { Clip, Word } from '@shared/types';
 import { IconButton, fmtClock } from '../components/ui';
 import { isTyping, type Player } from './Editor';
@@ -78,8 +78,9 @@ function makeView(clip: Clip, ripple: boolean) {
   return { pieces, list, items, gaps, span, outToDisp, target, relOf, relToDisp };
 }
 
-export function Timeline({ clip, words, peaks, player, update, wordSelected, onPick }: {
+export function Timeline({ clip, words, peaks, player, update, wordSelected, onPick, onSelection }: {
   clip: Clip; words: Word[]; peaks: number[]; player: Player; update: Update; wordSelected: boolean; onPick: () => void;
+  onSelection: (entries: number[]) => void;
 }) {
   const { t } = useTranslation();
   const scroller = useRef<HTMLDivElement>(null);
@@ -108,6 +109,7 @@ export function Timeline({ clip, words, peaks, player, update, wordSelected, onP
   const isMuted = (p: Piece) => p.muted;
   const copyNames = useMemo(() => { const m = new Map<number, number>(); pieces.forEach((p) => { if (p.g && !m.has(p.g)) m.set(p.g, m.size + 1); }); return m; }, [pieces]);
 
+  useEffect(() => { onSelection(pieces.filter((p) => sel.has(key(p))).map((p) => p.entry)); }, [sel, pieces]); // eslint-disable-line react-hooks/exhaustive-deps
   // seleção de palavras na transcrição e de pedaços na timeline não convivem
   useEffect(() => { if (wordSelected) setSel(new Set()); }, [wordSelected]);
   useEffect(() => { // pedaços que deixaram de existir saem da seleção
@@ -360,12 +362,13 @@ export function Timeline({ clip, words, peaks, player, update, wordSelected, onP
                       <span aria-hidden="true" className="absolute top-0.5 left-1 flex items-center gap-1 text-[10px] font-semibold text-text/80">
                         {mute && (d1 - d0) * pps > 22 && <VolumeX size={12} strokeWidth={1.75} className="text-muted" />}
                         {p.g > 0 && (d1 - d0) * pps > 30 && `C${copyNames.get(p.g)}`}
+                        {p.frame && clip.layout.mode === 'single' && (d1 - d0) * pps > 30 && <span className="rounded-sm bg-black/50 px-1">{t(`editor.frames.short.${presetOf(p.frame)}`)}</span>}
                       </span>
                     </button>
                   );
                 })}
-                {items.flatMap(({ p, d0 }) => forCopy(clip, p.g).reframe.filter((k) => k.t >= p.a && k.t <= p.b).map((k) => (
-                  <span key={`${key(p)}-${k.t}`} aria-hidden="true" className={`pointer-events-none absolute top-0.5 size-2 -translate-x-1 rotate-45 ${k.auto ? 'bg-text/30' : 'bg-primary'}`} style={{ left: x(d0 + k.t - p.a) }} />
+                {clip.layout.mode === 'single' && items.flatMap(({ p, d0 }) => framingFor(clip, p).reframe.filter((k) => p.frame || (k.t >= p.a && k.t <= p.b)).map((k) => (
+                  <span key={`${key(p)}-${k.t}`} aria-hidden="true" className={`pointer-events-none absolute top-0.5 size-2 -translate-x-1 rotate-45 ${k.auto ? 'bg-text/30' : 'bg-primary'}`} style={{ left: x(d0 + (p.frame ? 0 : k.t - p.a)) }} />
                 )))}
                 {gaps.map((g) => {
                   const label = t('editor.restoreCut', { d: (g.rel1 - g.rel0).toFixed(1) });

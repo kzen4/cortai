@@ -40,14 +40,17 @@ export interface Clip {
   caption: CaptionStyle; tracks: Track[]; audio: AudioSettings;
 }
 
-export interface EditItem { a: number; b: number; g: number; muted?: boolean } // a, b = segundos do original; g = cópia
+export interface EditItem { a: number; b: number; g: number; muted?: boolean; frame?: PieceFrame } // a, b = segundos do original; g = cópia
+/** Enquadramento fixo de um pedaço (centro da janela, 0–1 no original); sem ele, segue os keyframes da cópia. */
+export interface PieceFrame { x: number; y: number }
 export interface CopyEdits { wordEdits: Record<number, string>; reframe: ReframeKeyframe[] }
 export interface ReframeKeyframe { t: number; x: number; y: number;
   zoom: number; ease: 'linear' | 'smooth'; auto: boolean }
 
 export interface LayoutSettings { aspect: AspectRatio;
   mode: 'single' | 'split' | 'blur-bg' | 'color-bg' | 'screen-face';
-  smoothing: number; bgColor?: string; bgBlur?: number }
+  smoothing: number; bgColor?: string; bgBlur?: number;
+  webcam?: { x: number; y: number; w: number } } // tela + webcam: centro (0–1) e largura (fração) da janela no original
 
 export interface CaptionStyle {
   templateId: string; font: string; size: number; color: string;

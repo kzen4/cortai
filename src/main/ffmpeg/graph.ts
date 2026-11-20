@@ -1,6 +1,6 @@
 // Monta o filtergraph do export a partir do clipe. Espelha src/renderer/overlay/composite.ts (preview).
 import { ASPECT_SIZE } from '@shared/constants';
-import { clipPieces, cropRect, editList, forCopy, outDuration } from '@shared/timeline';
+import { clipPieces, cropRect, editList, framingFor, outDuration, webcamRect } from '@shared/timeline';
 import type { Clip } from '@shared/types';
 
 const f = (n: number) => (Math.round(n * 10000) / 10000).toString();
@@ -43,19 +43,27 @@ export function audioMeasureGraph(clip: ClipLike): string | null {
 }
 
 /** Vídeo base de um trecho que começa em `offset` (tempo "rel"): recorte/fundo + escala para o formato final. */
-export function layoutFilter(src: { width: number; height: number }, clip: ClipLike, offset: number, fps: number): string {
+export function layoutFilter(src: { width: number; height: number }, clip: ClipLike, offset: number, fps: number, k = 0): string {
   const [W, H] = ASPECT_SIZE[clip.layout.aspect];
   const tail = `setsar=1,fps=${fps}`;
   const fitW = src.width / src.height >= W / H; // o vídeo inteiro cabe pela largura
   const fit = fitW ? `scale=${W}:-2` : `scale=-2:${H}`;
   if (clip.layout.mode === 'blur-bg') {
     const sigma = clip.layout.bgBlur ?? 30;
-    return `split[fa][fb];[fa]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},gblur=sigma=${sigma}[bg];[fb]${fit}[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,${tail}`;
+    return `split[fa${k}][fb${k}];[fa${k}]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},gblur=sigma=${sigma}[bg${k}];[fb${k}]${fit}[fg${k}];[bg${k}][fg${k}]overlay=(W-w)/2:(H-h)/2,${tail}`;
   }
   if (clip.layout.mode === 'color-bg') {
     return `${fit},pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=${(clip.layout.bgColor ?? '#0B0B0F').replace('#', '0x')},${tail}`;
   }
-  // 'single' (e, por ora, 'split'/'screen-face'): janela que acompanha o rosto
+  if (clip.layout.mode === 'screen-face') {
+    // em cima o vídeo inteiro encaixado; embaixo a janela da webcam ampliada (webcamRect = mesma conta do preview)
+    const top = Math.round(H / 2), bot = H - top;
+    const c = webcamRect(src.width, src.height, clip.layout.aspect, clip.layout.webcam);
+    const bg = (clip.layout.bgColor ?? '#0B0B0F').replace('#', '0x');
+    return `split[ta${k}][tb${k}];[ta${k}]scale=${W}:${top}:force_original_aspect_ratio=decrease,pad=${W}:${top}:(ow-iw)/2:(oh-ih)/2:color=${bg}[top${k}];`
+      + `[tb${k}]crop=${even(c.sw)}:${even(c.sh)}:${Math.round(c.sx)}:${Math.round(c.sy)},scale=${W}:${bot}[bot${k}];[top${k}][bot${k}]vstack,${tail}`;
+  }
+  // 'single' (e, por ora, 'split'): janela que acompanha o rosto
   const kfs = clip.reframe.length ? clip.reframe : [{ t: 0, x: 0.5, y: 0.5, zoom: 1, ease: 'smooth' as const, auto: true }];
   const thin = kfs.length > 80 ? kfs.filter((_, i) => i % Math.ceil(kfs.length / 80) === 0) : kfs;
   const r = cropRect(src.width, src.height, clip.layout.aspect, 0.5, 0.5, kfs[0].zoom);
@@ -79,8 +87,8 @@ export function buildGraph(src: { width: number; height: number }, clip: ClipLik
     parts.push(`[0:v]split=${n}${vIn.join('')}`);
     parts.push(`[0:a]asplit=${n}${aIn.join('')}`);
   }
-  clipPieces(clip).forEach((p, i) => { // cada pedaço com o enquadramento da sua cópia
-    parts.push(`${vIn[i]}trim=start=${f(p.a)}:end=${f(p.b)},setpts=PTS-STARTPTS,${layoutFilter(src, forCopy(clip, p.g), p.a, fps)}[v${i}]`);
+  clipPieces(clip).forEach((p, i) => { // cada pedaço com o enquadramento dele (fixo) ou da sua cópia
+    parts.push(`${vIn[i]}trim=start=${f(p.a)}:end=${f(p.b)},setpts=PTS-STARTPTS,${layoutFilter(src, framingFor(clip, p), p.a, fps, i)}[v${i}]`);
     parts.push(`${aIn[i]}${segAudio(p.a, p.b, p.muted)}[a${i}]`);
   });
   parts.push(`${segs.map((_, i) => `[v${i}][a${i}]`).join('')}concat=n=${n}:v=1:a=1[bv][ba0]`);
