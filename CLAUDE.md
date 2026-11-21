@@ -139,6 +139,16 @@ prioridade sobre a do PATH. Modelos e perfis: `engine/models.json`; prompt da an
   pasta do projeto e os arquivos exportados (.mp4/.part.mp4/.srt/.txt) achados pelo histórico da fila + `exports.json` do projeto
   (`recordExport` a cada export — sobrevive ao "Limpar" das Exportações); pasta de saída vazia é removida. Nunca apaga o vídeo
   original importado do computador. E2E cobre cancelar (nada some) e confirmar (projeto + 3 arquivos somem).
+- **Beta público (2026-11-20):** repositório github.com/kzen4/cortai PÚBLICO (issues ativas; o e-mail dos commits fica visível — aceito
+  pelo usuário). Release **v0.1.0** publicada pelo workflow (tag `v0.1.0`; `publish.releaseType: release` no electron-builder.yml, senão
+  sai rascunho e "releases/latest" não acha). Site: "Baixar" → releases/latest, "Ver o código" → repositório, "Relatar um problema" →
+  issues/new/choose (pede login no GitHub). Nova versão: subir "version" no package.json, `git tag vX.Y.Z && git push origin vX.Y.Z`.
+  Sem `gh` na máquina: API do GitHub com o token do `git credential fill` (nunca exibir).
+- **Site — seção "Apoie o Cortaí" (#apoie)**, cópia da do POLISMap com a identidade do Cortaí: QR Pix (SVG do `segno`), chave
+  `e36ed168-ca50-4694-af54-3b23826c6791` (a mesma do POLISMap) e "Pix copia e cola" com recebedor **CORTAI** (CRC16 recalculado;
+  conferido: o mesmo cálculo reproduz o payload do POLISMap e o QR decodifica certo). Botões copiam e mostram aviso (#toast).
+  Mudou o texto/nome? Gerar payload+QR de novo (BR Code EMV: campos 00/26/52/53/58/59/60/62 + 6304 + CRC16-CCITT) e trocar no HTML.
+  Pendências do usuário: subir site/ para taissircarvalho.com.br/lab/cortai e fazer Pix de teste; testar o instalador num PC novo.
 - [ ] Resto da Fase 4 (V1) · Fase 5 (V2).
 
 Fase 2 medida: corte de 3 min tocando a ~120 fps (tela 120 Hz), 0/270 quadros de vídeo perdidos; volume -14,7 LUFS
